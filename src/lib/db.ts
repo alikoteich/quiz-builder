@@ -37,7 +37,10 @@ export async function signUp(username: string, password: string) {
 
   if (profileError) {
     await supabase.auth.signOut()
-    return { user: null, error: new Error('USERNAME_TAKEN') }
+    if (profileError.code === '23505') {
+      return { user: null, error: new Error('USERNAME_TAKEN') }
+    }
+    return { user: null, error: new Error(`DB_ERROR: ${profileError.message} (code: ${profileError.code})`) }
   }
 
   return { user, error: null }

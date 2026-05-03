@@ -39,9 +39,10 @@ export default function AuthPage() {
     } else {
       const { error: err } = await signUp(username.trim(), password)
       if (err) {
+        console.error('signUp error:', err)
         if (err.message === 'USERNAME_TAKEN') setError('اسم المستخدم مأخوذ، جرّب اسماً آخر')
         else if (err.message === 'EMAIL_CONFIRM_REQUIRED') setError('يرجى تفعيل الحساب من البريد الإلكتروني')
-        else setError('حدث خطأ، حاول مرة أخرى')
+        else setError(err.message)
         setBusy(false)
         return
       }
