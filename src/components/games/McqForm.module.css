@@ -1,0 +1,11 @@
+.optList { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+.opt {
+  display: flex; align-items: center; gap: 8px;
+  background: #F8F9FF; border: 2px solid #E8EAED;
+  border-radius: 11px; padding: 10px 14px;
+}
+.opt.correct { background: #DFFAE7; border-color: var(--grass); }
+.optText  { flex: 1; font-weight: 700; font-size: 1rem; }
+.checkBtn { background: none; border: none; font-size: 1.3rem; cursor: pointer; padding: 2px 6px; }
+.delBtn   { background: none; border: none; font-size: 1.1rem; cursor: pointer; color: var(--mid); padding: 2px 6px; }
+.delBtn:hover { color: var(--coral); }

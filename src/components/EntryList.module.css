@@ -1,0 +1,18 @@
+.wrap {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 20px;
+  box-shadow: var(--shadow);
+  margin-top: 12px;
+}
+.header { font-size: .95rem; font-weight: 800; margin-bottom: 11px; }
+.list   { display: flex; flex-direction: column; gap: 9px; }
+.item {
+  display: flex; align-items: center; gap: 9px;
+  background: #F8F9FF; border-radius: 11px;
+  padding: 11px 14px; border: 2px solid #E8EAED;
+  animation: entryIn .3s ease both;
+}
+.text { font-size: .95rem; font-weight: 700; flex: 1; }
+.del  { background: none; border: none; font-size: 1rem; cursor: pointer; color: var(--mid); transition: color .2s; padding: 4px; border-radius: 7px; }
+.del:hover { color: var(--coral); }

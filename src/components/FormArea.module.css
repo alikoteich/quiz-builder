@@ -1,0 +1,11 @@
+.area {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 26px;
+  box-shadow: var(--shadow);
+  margin-bottom: 18px;
+}
+.title { font-size: 1.3rem; font-weight: 800; margin-bottom: 10px; }
+.hint  { font-size: .8rem; color: var(--mid); margin-top: 4px; font-weight: 500; }
+.row   { margin-bottom: 16px; }
+.label { font-size: 1rem; font-weight: 700; color: var(--dark); display: block; margin-bottom: 8px; }

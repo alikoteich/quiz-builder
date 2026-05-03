@@ -1,0 +1,61 @@
+.page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: radial-gradient(circle at 20% 80%, rgba(91,200,245,.3) 0%, transparent 50%),
+              radial-gradient(circle at 80% 20%, rgba(255,217,61,.3) 0%, transparent 50%),
+              #FFFDF7;
+  overflow: hidden;
+  position: relative;
+}
+
+.blob1 { position:fixed; width:300px; height:300px; border-radius:50%; background:var(--sky); opacity:.15; top:-80px; left:-80px; pointer-events:none; animation:floatD 6s ease-in-out infinite; }
+.blob2 { position:fixed; width:180px; height:180px; border-radius:50%; background:var(--sun); opacity:.15; bottom:8%; right:-50px; pointer-events:none; animation:floatD 6s ease-in-out infinite; animation-delay:-2.5s; }
+
+.hero {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 40px 24px;
+  position: relative;
+  z-index: 1;
+}
+
+.heroEmoji  { font-size: 5rem; animation: bounce 2s ease-in-out infinite; display: block; margin-bottom: 16px; }
+.heroTitle  { font-size: clamp(2rem,5vw,3.2rem); font-weight: 900; line-height: 1.2; color: var(--dark); margin-bottom: 12px; }
+.heroSub    { font-size: 1.15rem; color: var(--mid); margin-bottom: 48px; font-weight: 500; max-width: 560px; }
+
+.cards {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.card {
+  background: var(--card);
+  border-radius: 32px;
+  padding: 36px 44px;
+  cursor: pointer;
+  box-shadow: var(--shadow);
+  transition: all .3s cubic-bezier(.34,1.56,.64,1);
+  min-width: 220px;
+  text-align: center;
+  border: 3px solid transparent;
+}
+.card:hover { transform: translateY(-8px) scale(1.02); box-shadow: var(--shadow-lg); }
+.teacher:hover { border-color: var(--sky); }
+.player:hover  { border-color: var(--coral); }
+.wheel:hover   { border-color: var(--sun); }
+
+.cardIcon  { font-size: 3.2rem; display: block; margin-bottom: 14px; transition: transform .3s; }
+.card:hover .cardIcon { transform: scale(1.2) rotate(5deg); }
+.cardTitle { font-size: 1.2rem; font-weight: 800; color: var(--dark); margin-bottom: 6px; }
+.cardDesc  { font-size: .85rem; color: var(--mid); font-weight: 500; }
+
+@media (max-width: 620px) {
+  .card { min-width: 90%; padding: 26px 20px; }
+}
