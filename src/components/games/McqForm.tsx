@@ -3,9 +3,9 @@
 import { useState } from 'react'
 import { useToast } from '@/components/Toast'
 import type { McqEntry } from '@/lib/types'
-import styles from './FormArea.module.css'
+import styles from '../FormArea.module.css'
 import optStyles from './McqForm.module.css'
-import EntryList from './EntryList'
+import EntryList from '../EntryList'
 
 interface Props { entries: McqEntry[]; onChange: (e: McqEntry[]) => void }
 

@@ -3,8 +3,8 @@
 import { useState } from 'react'
 import { useToast } from '@/components/Toast'
 import type { MatchWordsEntry } from '@/lib/types'
-import styles from './FormArea.module.css'
-import EntryList from './EntryList'
+import styles from '../FormArea.module.css'
+import EntryList from '../EntryList'
 
 interface Props {
   entries:  MatchWordsEntry[]
