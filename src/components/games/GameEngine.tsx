@@ -131,7 +131,7 @@ function TrueFalseQ({ question, onAnswer }: { question: GameEntry; onAnswer: Ans
 
 function McqQ({ question, onAnswer }: { question: GameEntry; onAnswer: AnswerFn }) {
   const q = question as any
-  const [shuffled] = useState(() => shuffle(q.options.map((t: string, i: number) => ({ t, correct: i === q.answerIndex }))))
+  const [shuffled] = useState<{ t: string; correct: boolean }[]>(() => shuffle(q.options.map((t: string, i: number) => ({ t, correct: i === q.answerIndex }))))
   const [chosen, setChosen] = useState<number | null>(null)
   const pick = (i: number) => {
     if (chosen !== null) return
@@ -299,8 +299,8 @@ function WordScrambleQ({ question, onAnswer }: { question: GameEntry; onAnswer: 
 function MatchWordsQ({ question, onAnswer }: { question: GameEntry; onAnswer: AnswerFn }) {
   const q = question as any
   const pairs: { left: string; right: string }[] = q.pairs
-  const [lefts]  = useState(() => shuffle(pairs.map(p => p.left)))
-  const [rights] = useState(() => shuffle(pairs.map(p => p.right)))
+  const [lefts]  = useState<string[]>(() => shuffle(pairs.map(p => p.left)))
+  const [rights] = useState<string[]>(() => shuffle(pairs.map(p => p.right)))
   const lr: Record<string, string> = {}
   pairs.forEach(p => { lr[p.left] = p.right })
 
@@ -364,7 +364,7 @@ function MatchWordsQ({ question, onAnswer }: { question: GameEntry; onAnswer: An
 function CategorizeQ({ question, onAnswer }: { question: GameEntry; onAnswer: AnswerFn }) {
   const q = question as any
   const catEntries: { category: string; items: string[] }[] = q.categories
-  const [allItems] = useState(() => shuffle(catEntries.flatMap((c: any) => c.items.map((item: string) => ({ item, cat: c.category })))))
+  const [allItems] = useState<{ item: string; cat: string }[]>(() => shuffle(catEntries.flatMap((c: any) => c.items.map((item: string) => ({ item, cat: c.category })))))
   const [placed, setPlaced]   = useState<Record<string, string>>({})
   const [checked, setChecked] = useState(false)
 
