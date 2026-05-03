@@ -364,13 +364,30 @@ function MatchWordsQ({ question, onAnswer }: { question: GameEntry; onAnswer: An
 function CategorizeQ({ question, onAnswer }: { question: GameEntry; onAnswer: AnswerFn }) {
   const q = question as any
   const catEntries: { category: string; items: string[] }[] = q.categories
-  const [allItems] = useState<{ item: string; cat: string }[]>(() => shuffle(catEntries.flatMap((c: any) => c.items.map((item: string) => ({ item, cat: c.category })))))
-  const [placed, setPlaced]   = useState<Record<string, string>>({})
-  const [checked, setChecked] = useState(false)
+  const [allItems] = useState<{ item: string; cat: string }[]>(() =>
+    shuffle(catEntries.flatMap((c: any) => c.items.map((item: string) => ({ item, cat: c.category }))))
+  )
+  const [placed, setPlaced]     = useState<Record<string, string>>({})
+  const [dragOver, setDragOver] = useState<string | null>(null)
+  const [checked, setChecked]   = useState(false)
 
-  const placeItem = (item: string, cat: string) => {
+  const placedItems = Object.keys(placed)
+  const bankItems   = allItems.filter((a: any) => !placedItems.includes(a.item))
+
+  const onDragStart = (e: React.DragEvent, item: string) => {
+    e.dataTransfer.setData('text/plain', item)
+    e.dataTransfer.effectAllowed = 'move'
+  }
+  const onDrop = (e: React.DragEvent, cat: string) => {
+    e.preventDefault()
     if (checked) return
-    setPlaced(p => ({ ...p, [item]: cat }))
+    const item = e.dataTransfer.getData('text/plain')
+    if (item) setPlaced(p => ({ ...p, [item]: cat }))
+    setDragOver(null)
+  }
+  const onDragOver = (e: React.DragEvent, cat: string) => {
+    e.preventDefault()
+    setDragOver(cat)
   }
   const removeItem = (item: string) => {
     if (checked) return
@@ -383,19 +400,41 @@ function CategorizeQ({ question, onAnswer }: { question: GameEntry; onAnswer: An
     setTimeout(() => onAnswer(correct), 700)
   }
 
-  const placedItems = Object.keys(placed)
-  const bankItems   = allItems.filter((a: any) => !placedItems.includes(a.item))
-
   return (
-    <div className={styles.qCard} style={{ maxWidth: 780 }}>
-      <p className={styles.qText} style={{ marginBottom: 16 }}>صنّف الكلمات في الفئة الصحيحة 🗂️</p>
+    <div className={styles.qCard} style={{ maxWidth: 820 }}>
+      <p className={styles.qText} style={{ marginBottom: 16 }}>اسحب الكلمات إلى الفئة الصحيحة 🗂️</p>
+
+      {/* Word bank */}
+      <div className={styles.catBank}>
+        {bankItems.length === 0
+          ? <span className={styles.catBankEmpty}>✅ تم وضع جميع الكلمات</span>
+          : bankItems.map((a: any) => (
+              <div
+                key={a.item}
+                className={styles.catDragChip}
+                draggable
+                onDragStart={e => onDragStart(e, a.item)}
+              >
+                {a.item}
+              </div>
+            ))
+        }
+      </div>
+
+      {/* Drop zones */}
       <div className={styles.catZones}>
         {catEntries.map((cat: any) => (
-          <div key={cat.category} className={styles.catZone}>
+          <div
+            key={cat.category}
+            className={`${styles.catZone} ${dragOver === cat.category ? styles.catDragOver : ''}`}
+            onDrop={e => onDrop(e, cat.category)}
+            onDragOver={e => onDragOver(e, cat.category)}
+            onDragLeave={() => setDragOver(null)}
+          >
             <div className={styles.catZoneTitle}>{cat.category}</div>
             <div className={styles.catItems}>
               {allItems.filter((a: any) => placed[a.item] === cat.category).map((a: any) => (
-                <button key={a.item} className={`${styles.catItem} ${styles.catPlaced}`} onClick={() => removeItem(a.item)}>
+                <button key={a.item} className={`${styles.catItem} ${styles.catPlaced}`} onClick={() => removeItem(a.item)} title="اضغط للإزالة">
                   {a.item} ✕
                 </button>
               ))}
@@ -403,19 +442,8 @@ function CategorizeQ({ question, onAnswer }: { question: GameEntry; onAnswer: An
           </div>
         ))}
       </div>
-      <div className={styles.catBank}>
-        {bankItems.map((a: any) => (
-          <div key={a.item} className={styles.catBankItem}>
-            <span>{a.item}</span>
-            {catEntries.map((cat: any) => (
-              <button key={cat.category} className={styles.catPlaceBtn} onClick={() => placeItem(a.item, cat.category)}>
-                {cat.category}
-              </button>
-            ))}
-          </div>
-        ))}
-      </div>
-      <button className="btn btn-primary" style={{ marginTop: 12 }} onClick={check}
+
+      <button className="btn btn-primary" style={{ marginTop: 14 }} onClick={check}
         disabled={checked || Object.keys(placed).length < allItems.length}>✔ تحقق</button>
     </div>
   )
