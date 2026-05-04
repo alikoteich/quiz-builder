@@ -1,5 +1,5 @@
 import { supabase } from './supabase'
-import type { Game, WheelList } from './types'
+import type { Game, WheelList, AnswerRecord, GameSession } from './types'
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
 
@@ -67,19 +67,24 @@ export async function getUsername(userId: string): Promise<string> {
 // ── Games ─────────────────────────────────────────────────────────────────────
 
 export async function loadGames(): Promise<Game[]> {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return []
+
   const { data, error } = await supabase
     .from('games')
     .select('*')
+    .eq('user_id', user.id)
     .order('id')
 
   if (error) { console.error(error); return [] }
 
   return (data ?? []).map((row) => ({
-    id:      row.id,
-    name:    row.name,
-    type:    row.type,
-    entries: row.entries,
-    created: row.created,
+    id:          row.id,
+    name:        row.name,
+    type:        row.type,
+    entries:     row.entries,
+    created:     row.created,
+    share_token: row.share_token ?? undefined,
   }))
 }
 
@@ -97,7 +102,9 @@ export async function saveGame(game: Game, userId: string): Promise<boolean> {
 }
 
 export async function deleteGame(id: string): Promise<boolean> {
-  const { error } = await supabase.from('games').delete().eq('id', id)
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return false
+  const { error } = await supabase.from('games').delete().eq('id', id).eq('user_id', user.id)
   if (error) { console.error(error); return false }
   return true
 }
@@ -105,9 +112,13 @@ export async function deleteGame(id: string): Promise<boolean> {
 // ── Wheel lists ───────────────────────────────────────────────────────────────
 
 export async function loadWheelLists(): Promise<WheelList[]> {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return []
+
   const { data, error } = await supabase
     .from('wheel_lists')
     .select('*')
+    .eq('user_id', user.id)
     .order('created_at')
 
   if (error) { console.error(error); return [] }
@@ -128,7 +139,75 @@ export async function saveWheelList(
 }
 
 export async function deleteWheelList(id: string): Promise<boolean> {
-  const { error } = await supabase.from('wheel_lists').delete().eq('id', id)
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return false
+  const { error } = await supabase.from('wheel_lists').delete().eq('id', id).eq('user_id', user.id)
   if (error) { console.error(error); return false }
   return true
+}
+
+// ── Share tokens ──────────────────────────────────────────────────────────────
+
+export async function getOrCreateShareToken(gameId: string, userId: string): Promise<string | null> {
+  const { data } = await supabase
+    .from('games')
+    .select('share_token')
+    .eq('id', gameId)
+    .eq('user_id', userId)
+    .single()
+  if (data?.share_token) return data.share_token
+
+  const token = crypto.randomUUID()
+  const { error } = await supabase
+    .from('games')
+    .update({ share_token: token })
+    .eq('id', gameId)
+    .eq('user_id', userId)
+  if (error) { console.error(error); return null }
+  return token
+}
+
+export async function loadGameByToken(token: string): Promise<Game | null> {
+  const { data, error } = await supabase
+    .from('games')
+    .select('*')
+    .eq('share_token', token)
+    .single()
+  if (error || !data) return null
+  return { id: data.id, name: data.name, type: data.type, entries: data.entries, created: data.created, share_token: data.share_token }
+}
+
+// ── Game sessions (student results) ──────────────────────────────────────────
+
+export async function saveGameSession(
+  gameId: string,
+  studentName: string,
+  answers: AnswerRecord[],
+  score: number,
+  total: number
+): Promise<boolean> {
+  const { error } = await supabase
+    .from('game_sessions')
+    .insert({ game_id: gameId, student_name: studentName, answers, score, total })
+  if (error) { console.error(error); return false }
+  return true
+}
+
+export async function loadGameSessions(gameId: string): Promise<GameSession[]> {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return []
+  const { data, error } = await supabase
+    .from('game_sessions')
+    .select('*')
+    .eq('game_id', gameId)
+    .order('played_at', { ascending: false })
+  if (error) { console.error(error); return [] }
+  return (data ?? []).map(r => ({
+    id:          r.id,
+    studentName: r.student_name,
+    answers:     r.answers,
+    score:       r.score,
+    total:       r.total,
+    playedAt:    r.played_at,
+  }))
 }

@@ -1,0 +1,92 @@
+/* ── Full-page loading / error ── */
+.center {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  background: #FFFDF7;
+  text-align: center;
+  padding: 24px;
+}
+
+.spinner {
+  width: 52px; height: 52px;
+  border: 5px solid #E8EAED;
+  border-top-color: var(--violet);
+  border-radius: 50%;
+  animation: spin .8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.loadingText  { font-size: 1.05rem; color: var(--mid); font-weight: 600; }
+.notFoundIcon { font-size: 4rem; }
+.notFoundTitle { font-size: 1.6rem; font-weight: 900; color: var(--dark); margin: 0; }
+.notFoundSub   { color: var(--mid); font-size: .95rem; margin: 0; }
+
+/* ── Name entry / done pages ── */
+.namePage {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at 20% 80%, rgba(91,200,245,.3) 0%, transparent 50%),
+              radial-gradient(circle at 80% 20%, rgba(255,217,61,.3) 0%, transparent 50%),
+              #FFFDF7;
+  position: relative;
+  overflow: hidden;
+  padding: 24px;
+}
+
+.blob1 { position:fixed; width:320px; height:320px; border-radius:50%; background:var(--sky); opacity:.15; top:-90px; left:-90px; pointer-events:none; animation:floatD 7s ease-in-out infinite; }
+.blob2 { position:fixed; width:200px; height:200px; border-radius:50%; background:var(--sun); opacity:.15; bottom:6%; right:-60px; pointer-events:none; animation:floatD 7s ease-in-out infinite; animation-delay:-3s; }
+@keyframes floatD { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-22px)} }
+
+.nameCard {
+  background: var(--card);
+  border-radius: 32px;
+  padding: 44px 36px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.12);
+  max-width: 440px;
+  width: 100%;
+  text-align: center;
+  position: relative;
+  z-index: 1;
+  animation: cardIn .5s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes cardIn { from{opacity:0;transform:scale(.88) translateY(24px)} to{opacity:1;transform:none} }
+
+.gameEmoji  { font-size: 3.8rem; display: block; margin-bottom: 14px; }
+.gameTitle  { font-size: 1.6rem; font-weight: 900; color: var(--dark); margin-bottom: 6px; }
+.namePrompt { font-size: 1rem; color: var(--mid); font-weight: 500; margin-bottom: 20px; }
+
+/* ── Done card ── */
+.doneCard {
+  background: var(--card);
+  border-radius: 32px;
+  padding: 48px 36px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.12);
+  max-width: 440px;
+  width: 100%;
+  text-align: center;
+  position: relative;
+  z-index: 1;
+  animation: cardIn .5s cubic-bezier(.34,1.56,.64,1);
+}
+
+.doneEmoji  { font-size: 5rem; display: block; margin-bottom: 12px; animation: bounce 1.5s ease-in-out infinite; }
+@keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-12px)} }
+
+.doneName   { font-size: 1.7rem; font-weight: 900; color: var(--dark); margin-bottom: 6px; }
+.doneStars  { font-size: 2.4rem; margin-bottom: 12px; display:flex; justify-content:center; gap:6px; }
+.doneScore  { font-size: 1.1rem; color: var(--mid); font-weight: 600; margin-bottom: 20px; }
+.doneSaved  {
+  display: inline-block;
+  background: #DFFAE7;
+  color: #2D7A44;
+  border-radius: 50px;
+  padding: 10px 24px;
+  font-size: .95rem;
+  font-weight: 700;
+}

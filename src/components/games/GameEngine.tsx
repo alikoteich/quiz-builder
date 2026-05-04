@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useCallback } from 'react'
-import type { Game, GameEntry } from '@/lib/types'
+import { useState, useCallback, useRef, useLayoutEffect, useEffect } from 'react'
+import type { Game, GameEntry, AnswerRecord } from '@/lib/types'
 import { useAudio } from '@/lib/useAudio'
 import styles from './GameEngine.module.css'
 
@@ -19,25 +19,62 @@ const WMSG = ['حاول مرة أخرى 💪','لا بأس، جرّب ثانية
 const rc = () => CMSG[Math.floor(Math.random()*CMSG.length)]
 const rw = () => WMSG[Math.floor(Math.random()*WMSG.length)]
 
+// ── helpers ────────────────────────────────────────────────────────────────────
+function getPrompt(g: Game, q: GameEntry): string {
+  const e = q as any
+  switch (g.type) {
+    case 'true-false':    return e.question
+    case 'mcq':           return e.question
+    case 'flashcard':     return e.front
+    case 'fill-blank':    return e.sentence
+    case 'sort-sentence': return 'رتّب الجملة'
+    case 'word-scramble': return `الكلمة: ${e.word ? e.word.split('').sort(() => Math.random()-.5).join('') : '?'}`
+    case 'match-words':   return 'وصّل الكلمات'
+    case 'categorize':    return 'صنّف الكلمات'
+    default: return ''
+  }
+}
+
 // ── types ─────────────────────────────────────────────────────────────────────
-interface Props { game: Game; onExit: () => void }
+interface StudentResult { answers: AnswerRecord[]; score: number; total: number }
+interface Props {
+  game: Game
+  onExit: () => void
+  studentMode?: boolean
+  studentName?: string
+  onComplete?: (result: StudentResult) => void
+}
 
-export default function GameEngine({ game, onExit }: Props) {
-  const { playSuccess, playError } = useAudio()
+function buildQuestions(g: Game): GameEntry[] {
+  if (g.type === 'match-words')  return [{ pairs: g.entries } as any]
+  if (g.type === 'categorize')   return [{ categories: g.entries } as any]
+  return shuffle(g.entries)
+}
 
-  const questions = buildQuestions(game)
+export default function GameEngine({ game, onExit, studentMode, studentName, onComplete }: Props) {
+  const { playSuccess, playError, playClick, playGameStart } = useAudio()
+
+  useEffect(() => { playGameStart() }, [])
+
+  // useState initializer runs once — prevents re-shuffling on every render
+  const [questions] = useState(() => buildQuestions(game))
   const [idx, setIdx]           = useState(0)
   const [score, setScore]       = useState(0)
+  const [answers, setAnswers]   = useState<AnswerRecord[]>([])
   const [feedback, setFeedback] = useState<{ type:'correct'|'wrong'; msg:string } | null>(null)
   const [done, setDone]         = useState(false)
+  const completedRef            = useRef(false)
 
-  function buildQuestions(g: Game): GameEntry[] {
-    if (g.type === 'match-words')  return [{ pairs: g.entries } as any]
-    if (g.type === 'categorize')   return [{ categories: g.entries } as any]
-    return shuffle(g.entries)
-  }
+  useEffect(() => {
+    if (done && studentMode && onComplete && !completedRef.current) {
+      completedRef.current = true
+      onComplete({ answers, score, total: questions.length })
+    }
+  }, [done])
 
-  const advance = useCallback((correct: boolean, msg?: string) => {
+  const advance = useCallback((correct: boolean, msg?: string, answerText?: string) => {
+    const prompt = getPrompt(game, questions[idx])
+    setAnswers(prev => [...prev, { prompt, studentAnswer: answerText ?? '', correct }])
     if (correct) {
       setScore(s => s + 1)
       playSuccess()
@@ -51,7 +88,7 @@ export default function GameEngine({ game, onExit }: Props) {
       if (idx + 1 >= questions.length) setDone(true)
       else setIdx(i => i + 1)
     }, 1600)
-  }, [idx, questions.length, playSuccess, playError])
+  }, [idx, questions, game, playSuccess, playError])
 
   if (done) {
     const pct = Math.round((score / questions.length) * 100)
@@ -60,13 +97,20 @@ export default function GameEngine({ game, onExit }: Props) {
       <div className={styles.resultPage}>
         <div className={styles.resultCard}>
           <span className={styles.resultEmoji}>{pct >= 80 ? '🏆' : pct >= 50 ? '🌟' : '💪'}</span>
+          {studentMode && studentName && (
+            <p className={styles.resultName}>أحسنت، {studentName}! 🎉</p>
+          )}
           <h2 className={styles.resultTitle}>{pct >= 80 ? 'أحسنت!' : pct >= 50 ? 'جيد جداً!' : 'حاول مرة أخرى!'}</h2>
           <div className={styles.stars}>{stars}</div>
           <p className={styles.resultScore}>{score} من {questions.length} إجابات صحيحة ({pct}%)</p>
-          <div style={{display:'flex',gap:11,justifyContent:'center',flexWrap:'wrap'}}>
-            <button className="btn btn-success btn-lg" onClick={() => { setIdx(0); setScore(0); setDone(false) }}>🔄 العب مجدداً</button>
-            <button className="btn btn-primary btn-lg" onClick={onExit}>🏠 القائمة</button>
-          </div>
+          {studentMode ? (
+            <p className={styles.resultSaving}>✅ جارٍ حفظ نتيجتك…</p>
+          ) : (
+            <div style={{display:'flex',gap:11,justifyContent:'center',flexWrap:'wrap'}}>
+              <button className="btn btn-success btn-lg" onClick={() => { setIdx(0); setScore(0); setAnswers([]); setDone(false); completedRef.current = false }}>🔄 العب مجدداً</button>
+              <button className="btn btn-primary btn-lg" onClick={onExit}>🏠 القائمة</button>
+            </div>
+          )}
         </div>
       </div>
     )
@@ -79,7 +123,7 @@ export default function GameEngine({ game, onExit }: Props) {
     <div className={styles.page}>
       {/* Header */}
       <div className={styles.header}>
-        <button className={styles.exitBtn} onClick={onExit}>← خروج</button>
+        <button className={styles.exitBtn} onClick={() => { playClick(); onExit() }}>← خروج</button>
         <div className={styles.gameTitle}>{game.name}</div>
         <div style={{display:'flex',alignItems:'center',gap:7}}>
           <div className={styles.progressWrap}><div className={styles.progressFill} style={{width:`${pct}%`}} /></div>
@@ -87,19 +131,29 @@ export default function GameEngine({ game, onExit }: Props) {
         </div>
       </div>
 
-      {/* Feedback overlay */}
-      {feedback && (
-        <div className={`${styles.feedbackOverlay} ${feedback.type==='correct' ? styles.feedCorrect : styles.feedWrong}`}>
-          <div className={styles.feedFrame}>
-            <span className={styles.feedIcon}>{feedback.type==='correct' ? '🌟' : '💪'}</span>
-            <div className={styles.feedMsg}>{feedback.msg}</div>
-          </div>
-        </div>
-      )}
-
-      {/* Question */}
+      {/* Question + inline feedback */}
       <div className={styles.content}>
-        <QuestionRenderer game={game} question={q} onAnswer={advance} />
+        {feedback && (
+          <div className={`${styles.feedBanner} ${feedback.type === 'correct' ? styles.feedOk : styles.feedErr}`}>
+            <span className={styles.feedEmoji}>{feedback.type === 'correct' ? '⭐' : '💪'}</span>
+            <span className={styles.feedText}>{feedback.msg}</span>
+            {feedback.type === 'correct' && (
+              <div className={styles.particles}>
+                <span className={`${styles.particle} ${styles.p1}`}>✨</span>
+                <span className={`${styles.particle} ${styles.p2}`}>🌟</span>
+                <span className={`${styles.particle} ${styles.p3}`}>⭐</span>
+                <span className={`${styles.particle} ${styles.p4}`}>💫</span>
+                <span className={`${styles.particle} ${styles.p5}`}>✨</span>
+                <span className={`${styles.particle} ${styles.p6}`}>🌟</span>
+                <span className={`${styles.particle} ${styles.p7}`}>⭐</span>
+                <span className={`${styles.particle} ${styles.p8}`}>💫</span>
+              </div>
+            )}
+          </div>
+        )}
+        <div className={`${styles.qWrap} ${feedback?.type === 'correct' ? styles.qWrapOk : feedback?.type === 'wrong' ? styles.qWrapErr : ''}`}>
+          <QuestionRenderer game={game} question={q} onAnswer={advance} key={idx} />
+        </div>
       </div>
     </div>
   )
@@ -107,7 +161,7 @@ export default function GameEngine({ game, onExit }: Props) {
 
 // ── Per-type question components (hooks must be at top level of each component) ─
 
-type AnswerFn = (correct: boolean, msg?: string) => void
+type AnswerFn = (correct: boolean, msg?: string, answerText?: string) => void
 
 function TrueFalseQ({ question, onAnswer }: { question: GameEntry; onAnswer: AnswerFn }) {
   const q = question as any
@@ -115,7 +169,7 @@ function TrueFalseQ({ question, onAnswer }: { question: GameEntry; onAnswer: Ans
   const check = (ans: string) => {
     if (disabled) return
     setDisabled(true)
-    onAnswer(ans === q.answer)
+    onAnswer(ans === q.answer, undefined, ans === 'true' ? 'صحيح' : 'خطأ')
   }
   return (
     <div className={styles.qCard}>
@@ -136,7 +190,7 @@ function McqQ({ question, onAnswer }: { question: GameEntry; onAnswer: AnswerFn 
   const pick = (i: number) => {
     if (chosen !== null) return
     setChosen(i)
-    setTimeout(() => onAnswer(shuffled[i].correct), 600)
+    setTimeout(() => onAnswer(shuffled[i].correct, undefined, shuffled[i].t), 600)
   }
   return (
     <div className={styles.qCard}>
@@ -158,10 +212,11 @@ function McqQ({ question, onAnswer }: { question: GameEntry; onAnswer: AnswerFn 
 function FlashcardQ({ question, onAnswer }: { question: GameEntry; onAnswer: AnswerFn }) {
   const q = question as any
   const [flipped, setFlipped] = useState(false)
+  const { playCardFlip } = useAudio()
   return (
     <div className={styles.qCard} style={{ maxWidth: 420 }}>
       <p className={styles.qText} style={{ marginBottom: 20 }}>اضغط على البطاقة لرؤية الإجابة 👆</p>
-      <div className={styles.flipScene} onClick={() => setFlipped(f => !f)}>
+      <div className={styles.flipScene} onClick={() => { playCardFlip(); setFlipped(f => !f) }}>
         <div className={`${styles.flipCard} ${flipped ? styles.flipped : ''}`}>
           <div className={`${styles.flipFace} ${styles.flipFront}`}>{q.front}<span className={styles.flipHint}>اضغط للقلب</span></div>
           <div className={`${styles.flipFace} ${styles.flipBack}`}>{q.back}</div>
@@ -169,8 +224,8 @@ function FlashcardQ({ question, onAnswer }: { question: GameEntry; onAnswer: Ans
       </div>
       {flipped && (
         <div style={{ display: 'flex', gap: 14, justifyContent: 'center', marginTop: 18 }}>
-          <button className="btn btn-success" onClick={() => onAnswer(true)}>✅ أعرفها!</button>
-          <button className="btn btn-danger"  onClick={() => onAnswer(false)}>❌ لا أعرفها</button>
+          <button className="btn btn-success" onClick={() => onAnswer(true,  undefined, '✅ أعرفها')}>✅ أعرفها!</button>
+          <button className="btn btn-danger"  onClick={() => onAnswer(false, undefined, '❌ لا أعرفها')}>❌ لا أعرفها</button>
         </div>
       )}
     </div>
@@ -185,7 +240,7 @@ function FillBlankQ({ question, onAnswer }: { question: GameEntry; onAnswer: Ans
     if (checked) return
     setChecked(true)
     const correct = val.trim() === q.answer.trim()
-    setTimeout(() => onAnswer(correct), 700)
+    setTimeout(() => onAnswer(correct, undefined, val.trim()), 700)
   }
   const parts: string[] = q.sentence.split('___')
   return (
@@ -208,14 +263,17 @@ function SortSentenceQ({ question, onAnswer }: { question: GameEntry; onAnswer: 
   const [bank, setBank]   = useState<string[]>(() => shuffle(words.map((w: string, i: number) => `${w}::${i}`)))
   const [slots, setSlots] = useState<string[]>([])
   const [checked, setChecked] = useState(false)
+  const { playLetterPlace, playLetterRemove } = useAudio()
 
   const pickFromBank = (token: string) => {
     if (checked) return
+    playLetterPlace()
     setSlots(s => [...s, token])
     setBank(b => b.filter(t => t !== token))
   }
   const removeFromSlot = (i: number) => {
     if (checked) return
+    playLetterRemove()
     const token = slots[i]
     setBank(b => [...b, token])
     setSlots(s => s.filter((_, j) => j !== i))
@@ -223,8 +281,9 @@ function SortSentenceQ({ question, onAnswer }: { question: GameEntry; onAnswer: 
   const check = () => {
     if (checked || slots.length !== words.length) return
     setChecked(true)
-    const correct = slots.map(t => t.split('::')[0]).join(' ') === q.sentence
-    setTimeout(() => onAnswer(correct), 700)
+    const assembled = slots.map(t => t.split('::')[0]).join(' ')
+    const correct = assembled === q.sentence
+    setTimeout(() => onAnswer(correct, undefined, assembled), 700)
   }
   return (
     <div className={styles.qCard}>
@@ -254,14 +313,17 @@ function WordScrambleQ({ question, onAnswer }: { question: GameEntry; onAnswer: 
   const [bank, setBank]   = useState<string[]>(() => shuffle(letters.map((l: string, i: number) => `${l}::${i}`)))
   const [slots, setSlots] = useState<string[]>([])
   const [checked, setChecked] = useState(false)
+  const { playLetterPlace, playLetterRemove } = useAudio()
 
   const pick = (token: string) => {
     if (checked) return
+    playLetterPlace()
     setSlots(s => [...s, token])
     setBank(b => b.filter(t => t !== token))
   }
   const remove = (i: number) => {
     if (checked) return
+    playLetterRemove()
     const t = slots[i]
     setBank(b => [...b, t])
     setSlots(s => s.filter((_, j) => j !== i))
@@ -269,8 +331,9 @@ function WordScrambleQ({ question, onAnswer }: { question: GameEntry; onAnswer: 
   const check = () => {
     if (checked || slots.length !== letters.length) return
     setChecked(true)
-    const correct = slots.map(t => t.split('::')[0]).join('') === q.word
-    setTimeout(() => onAnswer(correct), 700)
+    const assembled = slots.map(t => t.split('::')[0]).join('')
+    const correct = assembled === q.word
+    setTimeout(() => onAnswer(correct, undefined, assembled), 700)
   }
   return (
     <div className={styles.qCard}>
@@ -307,36 +370,70 @@ function MatchWordsQ({ question, onAnswer }: { question: GameEntry; onAnswer: An
   const [selLeft, setSelLeft]     = useState<string | null>(null)
   const [matched, setMatched]     = useState<Record<string, string>>({})
   const [wrongPair, setWrongPair] = useState<[string, string] | null>(null)
+  const { playMatch } = useAudio()
 
-  const pickLeft = (l: string) => {
-    if (matched[l]) return
-    setSelLeft(l)
-  }
+  // SVG connecting lines
+  const containerRef = useRef<HTMLDivElement>(null)
+  const leftRefs     = useRef<Record<string, HTMLDivElement | null>>({})
+  const rightRefs    = useRef<Record<string, HTMLDivElement | null>>({})
+  const [lines, setLines] = useState<{ x1:number; y1:number; x2:number; y2:number; key:string }[]>([])
+
+  useLayoutEffect(() => {
+    if (!containerRef.current || Object.keys(matched).length === 0) { setLines([]); return }
+    const cr = containerRef.current.getBoundingClientRect()
+    const nl = Object.entries(matched).flatMap(([left, right]) => {
+      const lEl = leftRefs.current[left]
+      const rEl = rightRefs.current[right]
+      if (!lEl || !rEl) return []
+      const lR = lEl.getBoundingClientRect()
+      const rR = rEl.getBoundingClientRect()
+      // RTL: lefts column is on the right visually — connect its left edge to rights' right edge
+      return [{ x1: lR.left - cr.left, y1: lR.top - cr.top + lR.height / 2,
+                x2: rR.right - cr.left, y2: rR.top - cr.top + rR.height / 2, key: left }]
+    })
+    setLines(nl)
+  }, [matched])
+
+  const pickLeft = (l: string) => { if (matched[l]) return; setSelLeft(l) }
   const pickRight = (r: string) => {
     if (!selLeft) return
     if (Object.values(matched).includes(r)) return
     if (lr[selLeft] === r) {
+      playMatch()
       const nm = { ...matched, [selLeft]: r }
       setMatched(nm)
       setSelLeft(null)
-      if (Object.keys(nm).length === pairs.length) setTimeout(() => onAnswer(true), 500)
+      if (Object.keys(nm).length === pairs.length) setTimeout(() => onAnswer(true, undefined, '✓ جميع الأزواج'), 700)
     } else {
       setWrongPair([selLeft, r])
       setTimeout(() => { setWrongPair(null); setSelLeft(null) }, 600)
     }
   }
+
   return (
-    <div className={styles.qCard} style={{ maxWidth: 700 }}>
+    <div className={styles.qCard} style={{ maxWidth: 740 }}>
       <p className={styles.qText} style={{ marginBottom: 20 }}>وصّل كل كلمة بما يناسبها 🔗</p>
-      <div className={styles.matchGrid}>
+      <div ref={containerRef} className={styles.matchGrid} style={{ position: 'relative' }}>
+        {/* SVG lines between matched pairs */}
+        <svg style={{ position:'absolute', inset:0, width:'100%', height:'100%', pointerEvents:'none', overflow:'visible', zIndex:1 }}>
+          {lines.map(l => {
+            const mid = (l.x1 + l.x2) / 2
+            return (
+              <path key={l.key}
+                d={`M ${l.x1} ${l.y1} C ${mid} ${l.y1}, ${mid} ${l.y2}, ${l.x2} ${l.y2}`}
+                stroke="var(--grass)" strokeWidth="3.5" fill="none" strokeLinecap="round" />
+            )
+          })}
+        </svg>
         <div className={styles.matchCol}>
           {lefts.map(l => {
             const isMatched = !!matched[l]
             const isWrong   = wrongPair?.[0] === l
             const isSel     = selLeft === l
             return (
-              <div key={l}
+              <div key={l} ref={el => { leftRefs.current[l] = el }}
                 className={`${styles.matchItem} ${isSel ? styles.matchSel : ''} ${isMatched ? styles.matchMatched : ''} ${isWrong ? styles.matchWrong : ''}`}
+                style={{ position:'relative', zIndex:2 }}
                 onClick={() => pickLeft(l)}>
                 {l}
               </div>
@@ -348,8 +445,9 @@ function MatchWordsQ({ question, onAnswer }: { question: GameEntry; onAnswer: An
             const isMatched = Object.values(matched).includes(r)
             const isWrong   = wrongPair?.[1] === r
             return (
-              <div key={r}
+              <div key={r} ref={el => { rightRefs.current[r] = el }}
                 className={`${styles.matchItem} ${isMatched ? styles.matchMatched : ''} ${isWrong ? styles.matchWrong : ''}`}
+                style={{ position:'relative', zIndex:2 }}
                 onClick={() => pickRight(r)}>
                 {r}
               </div>
@@ -364,13 +462,32 @@ function MatchWordsQ({ question, onAnswer }: { question: GameEntry; onAnswer: An
 function CategorizeQ({ question, onAnswer }: { question: GameEntry; onAnswer: AnswerFn }) {
   const q = question as any
   const catEntries: { category: string; items: string[] }[] = q.categories
-  const [allItems] = useState<{ item: string; cat: string }[]>(() => shuffle(catEntries.flatMap((c: any) => c.items.map((item: string) => ({ item, cat: c.category })))))
-  const [placed, setPlaced]   = useState<Record<string, string>>({})
-  const [checked, setChecked] = useState(false)
+  const [allItems] = useState<{ item: string; cat: string }[]>(() =>
+    shuffle(catEntries.flatMap((c: any) => c.items.map((item: string) => ({ item, cat: c.category }))))
+  )
+  const [placed, setPlaced]     = useState<Record<string, string>>({})
+  const [dragOver, setDragOver] = useState<string | null>(null)
+  const [checked, setChecked]   = useState(false)
+  const { playDragStart, playDrop } = useAudio()
 
-  const placeItem = (item: string, cat: string) => {
+  const placedItems = Object.keys(placed)
+  const bankItems   = allItems.filter((a: any) => !placedItems.includes(a.item))
+
+  const onDragStart = (e: React.DragEvent, item: string) => {
+    e.dataTransfer.setData('text/plain', item)
+    e.dataTransfer.effectAllowed = 'move'
+    playDragStart()
+  }
+  const onDrop = (e: React.DragEvent, cat: string) => {
+    e.preventDefault()
     if (checked) return
-    setPlaced(p => ({ ...p, [item]: cat }))
+    const item = e.dataTransfer.getData('text/plain')
+    if (item) { playDrop(); setPlaced(p => ({ ...p, [item]: cat })) }
+    setDragOver(null)
+  }
+  const onDragOver = (e: React.DragEvent, cat: string) => {
+    e.preventDefault()
+    setDragOver(cat)
   }
   const removeItem = (item: string) => {
     if (checked) return
@@ -380,42 +497,55 @@ function CategorizeQ({ question, onAnswer }: { question: GameEntry; onAnswer: An
     if (checked || Object.keys(placed).length < allItems.length) return
     setChecked(true)
     const correct = allItems.every((a: any) => placed[a.item] === a.cat)
-    setTimeout(() => onAnswer(correct), 700)
+    const rightCount = allItems.filter((a: any) => placed[a.item] === a.cat).length
+    const answerText = `${rightCount}/${allItems.length} صحيح`
+    setTimeout(() => onAnswer(correct, undefined, answerText), 2000)
   }
 
-  const placedItems = Object.keys(placed)
-  const bankItems   = allItems.filter((a: any) => !placedItems.includes(a.item))
-
   return (
-    <div className={styles.qCard} style={{ maxWidth: 780 }}>
-      <p className={styles.qText} style={{ marginBottom: 16 }}>صنّف الكلمات في الفئة الصحيحة 🗂️</p>
+    <div className={styles.qCard} style={{ maxWidth: 820 }}>
+      <p className={styles.qText} style={{ marginBottom: 16 }}>اسحب الكلمات إلى الفئة الصحيحة 🗂️</p>
+
+      {/* Word bank */}
+      <div className={styles.catBank}>
+        {bankItems.length === 0
+          ? <span className={styles.catBankEmpty}>✅ تم وضع جميع الكلمات</span>
+          : bankItems.map((a: any) => (
+              <div key={a.item} className={styles.catDragChip} draggable onDragStart={e => onDragStart(e, a.item)}>
+                {a.item}
+              </div>
+            ))
+        }
+      </div>
+
+      {/* Drop zones */}
       <div className={styles.catZones}>
         {catEntries.map((cat: any) => (
-          <div key={cat.category} className={styles.catZone}>
+          <div
+            key={cat.category}
+            className={`${styles.catZone} ${dragOver === cat.category ? styles.catDragOver : ''}`}
+            onDrop={e => onDrop(e, cat.category)}
+            onDragOver={e => onDragOver(e, cat.category)}
+            onDragLeave={() => setDragOver(null)}
+          >
             <div className={styles.catZoneTitle}>{cat.category}</div>
             <div className={styles.catItems}>
-              {allItems.filter((a: any) => placed[a.item] === cat.category).map((a: any) => (
-                <button key={a.item} className={`${styles.catItem} ${styles.catPlaced}`} onClick={() => removeItem(a.item)}>
-                  {a.item} ✕
-                </button>
-              ))}
+              {allItems.filter((a: any) => placed[a.item] === cat.category).map((a: any) => {
+                const isCorrect = a.cat === cat.category
+                return (
+                  <button key={a.item}
+                    className={`${styles.catItem} ${checked ? (isCorrect ? styles.catCorrect : styles.catWrong) : styles.catPlaced}`}
+                    onClick={() => removeItem(a.item)} title={checked ? '' : 'اضغط للإزالة'}>
+                    {a.item} {checked ? (isCorrect ? '✓' : '✗') : '✕'}
+                  </button>
+                )
+              })}
             </div>
           </div>
         ))}
       </div>
-      <div className={styles.catBank}>
-        {bankItems.map((a: any) => (
-          <div key={a.item} className={styles.catBankItem}>
-            <span>{a.item}</span>
-            {catEntries.map((cat: any) => (
-              <button key={cat.category} className={styles.catPlaceBtn} onClick={() => placeItem(a.item, cat.category)}>
-                {cat.category}
-              </button>
-            ))}
-          </div>
-        ))}
-      </div>
-      <button className="btn btn-primary" style={{ marginTop: 12 }} onClick={check}
+
+      <button className="btn btn-primary" style={{ marginTop: 14 }} onClick={check}
         disabled={checked || Object.keys(placed).length < allItems.length}>✔ تحقق</button>
     </div>
   )

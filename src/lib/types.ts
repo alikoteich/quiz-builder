@@ -30,6 +30,24 @@ export interface Game {
   type: GameType
   entries: GameEntry[]
   created: string
+  share_token?: string
+}
+
+// ── Student sessions ─────────────────────────────────────────────────────────
+
+export interface AnswerRecord {
+  prompt: string
+  studentAnswer: string
+  correct: boolean
+}
+
+export interface GameSession {
+  id: string
+  studentName: string
+  answers: AnswerRecord[]
+  score: number
+  total: number
+  playedAt: string
 }
 
 // ── Wheel list ───────────────────────────────────────────────────────────────

@@ -127,6 +127,11 @@
   position: relative;
 }
 
+.canvasWrap {
+  position: relative;
+  display: inline-block;
+}
+
 .canvas {
   border-radius: 50%;
   box-shadow: 0 12px 40px rgba(0,0,0,.18);
@@ -134,11 +139,24 @@
 }
 
 .pointer {
-  font-size: 2.4rem;
-  color: var(--coral);
-  margin-top: -16px;
-  filter: drop-shadow(0 2px 4px rgba(0,0,0,.2));
-  animation: none;
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%) translateY(-100%);
+  width: 0;
+  height: 0;
+  border-left: 14px solid transparent;
+  border-right: 14px solid transparent;
+  border-top: 28px solid var(--coral);
+  filter: drop-shadow(0 3px 6px rgba(0,0,0,.3));
+  z-index: 2;
+}
+
+.pickedRow {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
 }
 
 .pickedLabel {
@@ -151,6 +169,21 @@
   box-shadow: 0 8px 28px rgba(199,125,255,.4);
   animation: cardIn .4s ease;
 }
+
+.removeBtn {
+  padding: 9px 22px;
+  border: none;
+  border-radius: 50px;
+  font-family: 'Tajawal', sans-serif;
+  font-size: .9rem;
+  font-weight: 700;
+  cursor: pointer;
+  background: linear-gradient(135deg, var(--coral), #e05a5a);
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(255,107,107,.35);
+  transition: transform .2s, box-shadow .2s;
+}
+.removeBtn:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(255,107,107,.45); }
 
 @media (max-width: 660px) {
   .layout { flex-direction: column; }

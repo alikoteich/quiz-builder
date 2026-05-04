@@ -1,0 +1,131 @@
+.page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: radial-gradient(circle at 20% 80%, rgba(91,200,245,.3) 0%, transparent 50%),
+              radial-gradient(circle at 80% 20%, rgba(255,217,61,.3) 0%, transparent 50%),
+              #FFFDF7;
+  overflow: hidden;
+  position: relative;
+}
+.blob1 { position:fixed; width:300px; height:300px; border-radius:50%; background:var(--sky); opacity:.15; top:-80px; left:-80px; pointer-events:none; animation:floatD 6s ease-in-out infinite; }
+.blob2 { position:fixed; width:180px; height:180px; border-radius:50%; background:var(--sun); opacity:.15; bottom:8%; right:-50px; pointer-events:none; animation:floatD 6s ease-in-out infinite; animation-delay:-2.5s; }
+@keyframes floatD { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-18px)} }
+
+.wrap {
+  flex: 1;
+  max-width: 860px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 12px 20px 48px;
+  position: relative;
+  z-index: 1;
+}
+
+/* ── Header ── */
+.header { margin-bottom: 24px; }
+.title    { font-size: 1.55rem; font-weight: 900; color: var(--dark); margin-bottom: 2px; }
+.gameName { font-size: 1rem; color: var(--violet); font-weight: 700; margin-bottom: 4px; }
+.count    { font-size: .88rem; color: var(--mid); font-weight: 500; }
+
+/* ── Empty state ── */
+.empty { text-align: center; padding: 70px 24px; }
+.emptyIcon  { font-size: 3.5rem; display: block; margin-bottom: 14px; }
+.emptyTitle { font-size: 1.15rem; font-weight: 700; color: var(--dark); margin-bottom: 6px; }
+.emptySub   { font-size: .88rem; color: var(--mid); }
+
+/* ── Session list ── */
+.sessionList { display: flex; flex-direction: column; gap: 12px; }
+
+.sessionCard {
+  background: var(--card);
+  border-radius: 20px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  transition: box-shadow .2s;
+}
+.sessionCard:hover { box-shadow: var(--shadow-lg); }
+
+.sessionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  cursor: pointer;
+  gap: 12px;
+}
+
+.studentInfo { display: flex; align-items: center; gap: 13px; }
+
+.avatar {
+  width: 42px; height: 42px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--violet), var(--sky));
+  color: #fff;
+  font-size: 1.15rem;
+  font-weight: 900;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+
+.studentName { font-size: 1rem; font-weight: 800; color: var(--dark); }
+.sessionDate { font-size: .78rem; color: var(--mid); font-weight: 500; margin-top: 1px; }
+
+.scoreSection { display: flex; align-items: center; gap: 12px; }
+
+.scoreBadge {
+  padding: 6px 16px;
+  border-radius: 50px;
+  font-size: .88rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.scoreHigh { background: #DFFAE7; color: #1E6B37; }
+.scoreMid  { background: #FFF8DC; color: #8B6914; }
+.scoreLow  { background: #FFE8E8; color: #B83232; }
+
+.arrow { font-size: .75rem; color: var(--mid); }
+
+/* ── Answers table ── */
+.answersTable {
+  border-top: 1px solid #F0F1F5;
+  padding: 0 20px 16px;
+}
+
+.answersHead {
+  display: grid;
+  grid-template-columns: 32px 1fr 1fr 40px;
+  gap: 8px;
+  padding: 10px 10px 6px;
+  font-size: .75rem;
+  font-weight: 800;
+  color: var(--mid);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+.answerRow {
+  display: grid;
+  grid-template-columns: 32px 1fr 1fr 40px;
+  gap: 8px;
+  padding: 9px 10px;
+  border-radius: 10px;
+  font-size: .875rem;
+  font-weight: 600;
+  align-items: center;
+  margin-bottom: 3px;
+}
+.answerCorrect { background: #F2FDF5; }
+.answerWrong   { background: #FFF5F5; }
+
+.answerNum    { color: var(--mid); font-weight: 700; font-size: .8rem; }
+.answerPrompt { color: var(--dark); line-height: 1.4; }
+.answerGiven  { color: var(--dark); line-height: 1.4; }
+.answerIcon   { text-align: center; font-size: 1rem; }
+
+@media (max-width: 580px) {
+  .answersHead,
+  .answerRow { grid-template-columns: 24px 1fr 40px; }
+  .answersHead span:nth-child(3),
+  .answerRow .answerGiven { display: none; }
+}
