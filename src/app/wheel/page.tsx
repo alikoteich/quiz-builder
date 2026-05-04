@@ -173,9 +173,19 @@ export default function WheelPage() {
               <canvas ref={canvasRef} width={360} height={360} className={styles.canvas} />
               <div className={styles.pointer} />
             </div>
-            {picked && <div className={styles.pickedLabel}>{picked} 🎉</div>}
+            {picked && (
+              <div className={styles.pickedRow}>
+                <div className={styles.pickedLabel}>{picked} 🎉</div>
+                <button className={styles.removeBtn} onClick={() => {
+                  const next = names.filter(n => n !== picked)
+                  setNames(next)
+                  setPicked('')
+                  if (next.length < 2) { setShowWheel(false) }
+                }}>🗑 إزالة من القائمة</button>
+              </div>
+            )}
             <div style={{display:'flex',gap:10,justifyContent:'center',flexWrap:'wrap',marginTop:14}}>
-              <button className="btn btn-sun btn-lg" onClick={spinWheel} disabled={spinning}>
+              <button className="btn btn-sun btn-lg" onClick={spinWheel} disabled={spinning || names.length < 2}>
                 {spinning ? '🎡 يدور…' : '🎡 أدر الدولاب!'}
               </button>
               <button className="btn btn-ghost" onClick={()=>{setShowWheel(false);setPicked('')}}>← تغيير القائمة</button>
