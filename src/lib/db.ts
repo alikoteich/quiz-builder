@@ -67,9 +67,13 @@ export async function getUsername(userId: string): Promise<string> {
 // ── Games ─────────────────────────────────────────────────────────────────────
 
 export async function loadGames(): Promise<Game[]> {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return []
+
   const { data, error } = await supabase
     .from('games')
     .select('*')
+    .eq('user_id', user.id)
     .order('id')
 
   if (error) { console.error(error); return [] }
@@ -97,7 +101,9 @@ export async function saveGame(game: Game, userId: string): Promise<boolean> {
 }
 
 export async function deleteGame(id: string): Promise<boolean> {
-  const { error } = await supabase.from('games').delete().eq('id', id)
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return false
+  const { error } = await supabase.from('games').delete().eq('id', id).eq('user_id', user.id)
   if (error) { console.error(error); return false }
   return true
 }
@@ -105,9 +111,13 @@ export async function deleteGame(id: string): Promise<boolean> {
 // ── Wheel lists ───────────────────────────────────────────────────────────────
 
 export async function loadWheelLists(): Promise<WheelList[]> {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return []
+
   const { data, error } = await supabase
     .from('wheel_lists')
     .select('*')
+    .eq('user_id', user.id)
     .order('created_at')
 
   if (error) { console.error(error); return [] }
@@ -128,7 +138,9 @@ export async function saveWheelList(
 }
 
 export async function deleteWheelList(id: string): Promise<boolean> {
-  const { error } = await supabase.from('wheel_lists').delete().eq('id', id)
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return false
+  const { error } = await supabase.from('wheel_lists').delete().eq('id', id).eq('user_id', user.id)
   if (error) { console.error(error); return false }
   return true
 }
