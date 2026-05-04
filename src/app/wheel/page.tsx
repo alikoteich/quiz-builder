@@ -169,8 +169,10 @@ export default function WheelPage() {
         ) : (
           /* ── Wheel view ── */
           <div className={styles.wheelView}>
-            <canvas ref={canvasRef} width={360} height={360} className={styles.canvas} />
-            <div className={styles.pointer}>▲</div>
+            <div className={styles.canvasWrap}>
+              <canvas ref={canvasRef} width={360} height={360} className={styles.canvas} />
+              <div className={styles.pointer} />
+            </div>
             {picked && <div className={styles.pickedLabel}>{picked} 🎉</div>}
             <div style={{display:'flex',gap:10,justifyContent:'center',flexWrap:'wrap',marginTop:14}}>
               <button className="btn btn-sun btn-lg" onClick={spinWheel} disabled={spinning}>
