@@ -66,9 +66,11 @@
   cursor: pointer; transition: all .18s;
 }
 .cardActions button:hover { transform: scale(1.05); }
-.btnPlay   { background: linear-gradient(135deg,var(--grass),#45B36B); color:#fff; }
-.btnEdit   { background: #EEF4FF; color: var(--violet); }
-.btnDelete { background: #FFF0F0; color: var(--coral); }
+.btnPlay    { background: linear-gradient(135deg,var(--grass),#45B36B); color:#fff; }
+.btnEdit    { background: #EEF4FF; color: var(--violet); }
+.btnShare   { background: linear-gradient(135deg,var(--sky),#3aaad4); color:#fff; }
+.btnResults { background: #FFF8DC; color: #8B6914; }
+.btnDelete  { background: #FFF0F0; color: var(--coral); }
 
 .empty { text-align: center; padding: 70px 24px; color: var(--mid); grid-column: 1/-1; }
 .emptyIcon { font-size: 3.5rem; display: block; margin-bottom: 14px; }

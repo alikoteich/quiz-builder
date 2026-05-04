@@ -208,9 +208,11 @@
   background:radial-gradient(circle at 10% 90%,rgba(199,125,255,.2) 0%,transparent 40%),#FFFDF7; padding:20px; }
 .resultCard { background:var(--card); border-radius:30px; padding:40px 32px; text-align:center; max-width:480px; width:100%; box-shadow:var(--shadow-lg); }
 .resultEmoji { font-size:4.8rem; display:block; margin-bottom:13px; animation:bounce 1.5s ease-in-out infinite; }
+.resultName  { font-size:1.15rem; font-weight:700; color:var(--violet); margin-bottom:4px; }
 .resultTitle { font-size:1.9rem; font-weight:900; margin-bottom:9px; }
 .stars       { display:flex; justify-content:center; gap:7px; font-size:2.6rem; margin-bottom:14px; }
 .resultScore { font-size:1.05rem; color:var(--mid); font-weight:600; margin-bottom:26px; }
+.resultSaving { font-size:.95rem; color:var(--grass); font-weight:700; }
 
 /* ── Fill blank input ────────────────────────────────────────── */
 .blankInput {

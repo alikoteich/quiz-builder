@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/components/AuthProvider'
 import TopBar from '@/components/TopBar'
-import { loadGames, deleteGame } from '@/lib/db'
+import { useToast } from '@/components/Toast'
+import { loadGames, deleteGame, getOrCreateShareToken } from '@/lib/db'
 import type { Game, GameType } from '@/lib/types'
 import styles from './library.module.css'
 
@@ -22,8 +23,10 @@ const TYPE_META: Record<GameType, { icon: string; label: string }> = {
 export default function LibraryPage() {
   const { user, loading } = useAuth()
   const router = useRouter()
-  const [games, setGames] = useState<Game[]>([])
+  const { showToast } = useToast()
+  const [games, setGames]       = useState<Game[]>([])
   const [fetching, setFetching] = useState(true)
+  const [sharing, setSharing]   = useState<string | null>(null)
 
   useEffect(() => {
     if (!loading && !user) { router.replace('/auth'); return }
@@ -31,6 +34,22 @@ export default function LibraryPage() {
       loadGames().then(g => { setGames(g); setFetching(false) })
     }
   }, [user, loading, router])
+
+  async function handleShare(game: Game) {
+    if (!user) return
+    setSharing(game.id)
+    const token = await getOrCreateShareToken(game.id, user.id)
+    setSharing(null)
+    if (!token) { showToast('⚠️ تعذّر إنشاء رابط المشاركة'); return }
+    const url = `${window.location.origin}/play/${token}`
+    try {
+      await navigator.clipboard.writeText(url)
+      showToast('✅ تم نسخ رابط اللعبة!')
+    } catch {
+      showToast(`🔗 ${url}`)
+    }
+    setGames(g => g.map(x => x.id === game.id ? { ...x, share_token: token } : x))
+  }
 
   async function handleDelete(id: string) {
     if (!confirm('هل تريد حذف هذه اللعبة؟')) return
@@ -70,9 +89,13 @@ export default function LibraryPage() {
               <div className={styles.cardName}>{game.name}</div>
               <div className={styles.cardMeta}>{meta.label} · {game.entries.length} عناصر</div>
               <div className={styles.cardActions}>
-                <button className={styles.btnPlay}   onClick={() => handlePlay(game)}>▶ تشغيل</button>
-                <button className={styles.btnEdit}   onClick={() => { sessionStorage.setItem('editGame', JSON.stringify(game)); router.push('/create') }}>✏️ تعديل</button>
-                <button className={styles.btnDelete} onClick={() => handleDelete(game.id)}>🗑</button>
+                <button className={styles.btnPlay}    onClick={() => handlePlay(game)}>▶ تشغيل</button>
+                <button className={styles.btnEdit}    onClick={() => { sessionStorage.setItem('editGame', JSON.stringify(game)); router.push('/create') }}>✏️ تعديل</button>
+                <button className={styles.btnShare}   onClick={() => handleShare(game)} disabled={sharing === game.id}>
+                  {sharing === game.id ? '…' : '🔗 مشاركة'}
+                </button>
+                <button className={styles.btnResults} onClick={() => router.push(`/results/${game.id}`)}>📊 نتائج</button>
+                <button className={styles.btnDelete}  onClick={() => handleDelete(game.id)}>🗑</button>
               </div>
             </div>
           )

@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useCallback, useRef, useLayoutEffect } from 'react'
-import type { Game, GameEntry } from '@/lib/types'
+import { useState, useCallback, useRef, useLayoutEffect, useEffect } from 'react'
+import type { Game, GameEntry, AnswerRecord } from '@/lib/types'
 import { useAudio } from '@/lib/useAudio'
 import styles from './GameEngine.module.css'
 
@@ -19,8 +19,31 @@ const WMSG = ['حاول مرة أخرى 💪','لا بأس، جرّب ثانية
 const rc = () => CMSG[Math.floor(Math.random()*CMSG.length)]
 const rw = () => WMSG[Math.floor(Math.random()*WMSG.length)]
 
+// ── helpers ────────────────────────────────────────────────────────────────────
+function getPrompt(g: Game, q: GameEntry): string {
+  const e = q as any
+  switch (g.type) {
+    case 'true-false':    return e.question
+    case 'mcq':           return e.question
+    case 'flashcard':     return e.front
+    case 'fill-blank':    return e.sentence
+    case 'sort-sentence': return 'رتّب الجملة'
+    case 'word-scramble': return `الكلمة: ${e.word ? e.word.split('').sort(() => Math.random()-.5).join('') : '?'}`
+    case 'match-words':   return 'وصّل الكلمات'
+    case 'categorize':    return 'صنّف الكلمات'
+    default: return ''
+  }
+}
+
 // ── types ─────────────────────────────────────────────────────────────────────
-interface Props { game: Game; onExit: () => void }
+interface StudentResult { answers: AnswerRecord[]; score: number; total: number }
+interface Props {
+  game: Game
+  onExit: () => void
+  studentMode?: boolean
+  studentName?: string
+  onComplete?: (result: StudentResult) => void
+}
 
 function buildQuestions(g: Game): GameEntry[] {
   if (g.type === 'match-words')  return [{ pairs: g.entries } as any]
@@ -28,17 +51,28 @@ function buildQuestions(g: Game): GameEntry[] {
   return shuffle(g.entries)
 }
 
-export default function GameEngine({ game, onExit }: Props) {
+export default function GameEngine({ game, onExit, studentMode, studentName, onComplete }: Props) {
   const { playSuccess, playError } = useAudio()
 
   // useState initializer runs once — prevents re-shuffling on every render
   const [questions] = useState(() => buildQuestions(game))
   const [idx, setIdx]           = useState(0)
   const [score, setScore]       = useState(0)
+  const [answers, setAnswers]   = useState<AnswerRecord[]>([])
   const [feedback, setFeedback] = useState<{ type:'correct'|'wrong'; msg:string } | null>(null)
   const [done, setDone]         = useState(false)
+  const completedRef            = useRef(false)
 
-  const advance = useCallback((correct: boolean, msg?: string) => {
+  useEffect(() => {
+    if (done && studentMode && onComplete && !completedRef.current) {
+      completedRef.current = true
+      onComplete({ answers, score, total: questions.length })
+    }
+  }, [done])
+
+  const advance = useCallback((correct: boolean, msg?: string, answerText?: string) => {
+    const prompt = getPrompt(game, questions[idx])
+    setAnswers(prev => [...prev, { prompt, studentAnswer: answerText ?? '', correct }])
     if (correct) {
       setScore(s => s + 1)
       playSuccess()
@@ -52,7 +86,7 @@ export default function GameEngine({ game, onExit }: Props) {
       if (idx + 1 >= questions.length) setDone(true)
       else setIdx(i => i + 1)
     }, 1600)
-  }, [idx, questions.length, playSuccess, playError])
+  }, [idx, questions, game, playSuccess, playError])
 
   if (done) {
     const pct = Math.round((score / questions.length) * 100)
@@ -61,13 +95,20 @@ export default function GameEngine({ game, onExit }: Props) {
       <div className={styles.resultPage}>
         <div className={styles.resultCard}>
           <span className={styles.resultEmoji}>{pct >= 80 ? '🏆' : pct >= 50 ? '🌟' : '💪'}</span>
+          {studentMode && studentName && (
+            <p className={styles.resultName}>أحسنت، {studentName}! 🎉</p>
+          )}
           <h2 className={styles.resultTitle}>{pct >= 80 ? 'أحسنت!' : pct >= 50 ? 'جيد جداً!' : 'حاول مرة أخرى!'}</h2>
           <div className={styles.stars}>{stars}</div>
           <p className={styles.resultScore}>{score} من {questions.length} إجابات صحيحة ({pct}%)</p>
-          <div style={{display:'flex',gap:11,justifyContent:'center',flexWrap:'wrap'}}>
-            <button className="btn btn-success btn-lg" onClick={() => { setIdx(0); setScore(0); setDone(false) }}>🔄 العب مجدداً</button>
-            <button className="btn btn-primary btn-lg" onClick={onExit}>🏠 القائمة</button>
-          </div>
+          {studentMode ? (
+            <p className={styles.resultSaving}>✅ جارٍ حفظ نتيجتك…</p>
+          ) : (
+            <div style={{display:'flex',gap:11,justifyContent:'center',flexWrap:'wrap'}}>
+              <button className="btn btn-success btn-lg" onClick={() => { setIdx(0); setScore(0); setAnswers([]); setDone(false); completedRef.current = false }}>🔄 العب مجدداً</button>
+              <button className="btn btn-primary btn-lg" onClick={onExit}>🏠 القائمة</button>
+            </div>
+          )}
         </div>
       </div>
     )
@@ -118,7 +159,7 @@ export default function GameEngine({ game, onExit }: Props) {
 
 // ── Per-type question components (hooks must be at top level of each component) ─
 
-type AnswerFn = (correct: boolean, msg?: string) => void
+type AnswerFn = (correct: boolean, msg?: string, answerText?: string) => void
 
 function TrueFalseQ({ question, onAnswer }: { question: GameEntry; onAnswer: AnswerFn }) {
   const q = question as any
@@ -126,7 +167,7 @@ function TrueFalseQ({ question, onAnswer }: { question: GameEntry; onAnswer: Ans
   const check = (ans: string) => {
     if (disabled) return
     setDisabled(true)
-    onAnswer(ans === q.answer)
+    onAnswer(ans === q.answer, undefined, ans === 'true' ? 'صحيح' : 'خطأ')
   }
   return (
     <div className={styles.qCard}>
@@ -147,7 +188,7 @@ function McqQ({ question, onAnswer }: { question: GameEntry; onAnswer: AnswerFn 
   const pick = (i: number) => {
     if (chosen !== null) return
     setChosen(i)
-    setTimeout(() => onAnswer(shuffled[i].correct), 600)
+    setTimeout(() => onAnswer(shuffled[i].correct, undefined, shuffled[i].t), 600)
   }
   return (
     <div className={styles.qCard}>
@@ -180,8 +221,8 @@ function FlashcardQ({ question, onAnswer }: { question: GameEntry; onAnswer: Ans
       </div>
       {flipped && (
         <div style={{ display: 'flex', gap: 14, justifyContent: 'center', marginTop: 18 }}>
-          <button className="btn btn-success" onClick={() => onAnswer(true)}>✅ أعرفها!</button>
-          <button className="btn btn-danger"  onClick={() => onAnswer(false)}>❌ لا أعرفها</button>
+          <button className="btn btn-success" onClick={() => onAnswer(true,  undefined, '✅ أعرفها')}>✅ أعرفها!</button>
+          <button className="btn btn-danger"  onClick={() => onAnswer(false, undefined, '❌ لا أعرفها')}>❌ لا أعرفها</button>
         </div>
       )}
     </div>
@@ -196,7 +237,7 @@ function FillBlankQ({ question, onAnswer }: { question: GameEntry; onAnswer: Ans
     if (checked) return
     setChecked(true)
     const correct = val.trim() === q.answer.trim()
-    setTimeout(() => onAnswer(correct), 700)
+    setTimeout(() => onAnswer(correct, undefined, val.trim()), 700)
   }
   const parts: string[] = q.sentence.split('___')
   return (
@@ -234,8 +275,9 @@ function SortSentenceQ({ question, onAnswer }: { question: GameEntry; onAnswer: 
   const check = () => {
     if (checked || slots.length !== words.length) return
     setChecked(true)
-    const correct = slots.map(t => t.split('::')[0]).join(' ') === q.sentence
-    setTimeout(() => onAnswer(correct), 700)
+    const assembled = slots.map(t => t.split('::')[0]).join(' ')
+    const correct = assembled === q.sentence
+    setTimeout(() => onAnswer(correct, undefined, assembled), 700)
   }
   return (
     <div className={styles.qCard}>
@@ -280,8 +322,9 @@ function WordScrambleQ({ question, onAnswer }: { question: GameEntry; onAnswer: 
   const check = () => {
     if (checked || slots.length !== letters.length) return
     setChecked(true)
-    const correct = slots.map(t => t.split('::')[0]).join('') === q.word
-    setTimeout(() => onAnswer(correct), 700)
+    const assembled = slots.map(t => t.split('::')[0]).join('')
+    const correct = assembled === q.word
+    setTimeout(() => onAnswer(correct, undefined, assembled), 700)
   }
   return (
     <div className={styles.qCard}>
@@ -349,7 +392,7 @@ function MatchWordsQ({ question, onAnswer }: { question: GameEntry; onAnswer: An
       const nm = { ...matched, [selLeft]: r }
       setMatched(nm)
       setSelLeft(null)
-      if (Object.keys(nm).length === pairs.length) setTimeout(() => onAnswer(true), 700)
+      if (Object.keys(nm).length === pairs.length) setTimeout(() => onAnswer(true, undefined, '✓ جميع الأزواج'), 700)
     } else {
       setWrongPair([selLeft, r])
       setTimeout(() => { setWrongPair(null); setSelLeft(null) }, 600)
@@ -441,8 +484,9 @@ function CategorizeQ({ question, onAnswer }: { question: GameEntry; onAnswer: An
     if (checked || Object.keys(placed).length < allItems.length) return
     setChecked(true)
     const correct = allItems.every((a: any) => placed[a.item] === a.cat)
-    // Delay lets kids read the per-word green/red feedback before the overlay
-    setTimeout(() => onAnswer(correct), 2000)
+    const rightCount = allItems.filter((a: any) => placed[a.item] === a.cat).length
+    const answerText = `${rightCount}/${allItems.length} صحيح`
+    setTimeout(() => onAnswer(correct, undefined, answerText), 2000)
   }
 
   return (
