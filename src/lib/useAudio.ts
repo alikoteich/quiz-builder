@@ -3,19 +3,25 @@
 import { useRef, useEffect } from 'react'
 
 export function useAudio() {
-  const ctxRef    = useRef<AudioContext | null>(null)
-  const interacted = useRef(false)
+  const ctxRef = useRef<AudioContext | null>(null)
 
   useEffect(() => {
-    const handler = () => { interacted.current = true }
-    document.addEventListener('click', handler, { once: true, capture: true })
-    return () => document.removeEventListener('click', handler, true)
+    // pointerdown fires before click — pre-create and resume the AudioContext
+    // so it's ready the instant the user's finger lifts and onClick fires.
+    const warmUp = () => {
+      try {
+        if (!ctxRef.current) ctxRef.current = new AudioContext()
+        if (ctxRef.current.state === 'suspended') ctxRef.current.resume()
+      } catch {}
+    }
+    document.addEventListener('pointerdown', warmUp, { capture: true })
+    return () => document.removeEventListener('pointerdown', warmUp, true)
   }, [])
 
   function getCtx(): AudioContext | null {
-    if (!interacted.current) return null
     try {
-      if (!ctxRef.current) ctxRef.current = new AudioContext()
+      if (!ctxRef.current) return null
+      if (ctxRef.current.state === 'suspended') ctxRef.current.resume()
       return ctxRef.current
     } catch { return null }
   }
@@ -72,12 +78,9 @@ export function useAudio() {
     playError:   () => { tone(200, 'sawtooth', 0.18, 0.22); tone(160, 'sawtooth', 0.28, 0.22, 0.11) },
 
     // ── UI clicks ────────────────────────────────────────────────────────────
-    playClick: () => {
-      tone(520, 'sine', 0.06, 0.14)
-      tone(680, 'sine', 0.05, 0.10, 0.04)
-    },
+    playClick: () => tone(600, 'sine', 0.07, 0.18),
 
-    playHover: () => tone(880, 'sine', 0.035, 0.05),
+    playHover: () => tone(880, 'sine', 0.03, 0.045),
 
     // ── Wheel ────────────────────────────────────────────────────────────────
     playWheelStart: () => {
