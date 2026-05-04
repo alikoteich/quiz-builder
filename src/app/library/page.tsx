@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '@/components/AuthProvider'
 import TopBar from '@/components/TopBar'
 import { useToast } from '@/components/Toast'
+import { useAudio } from '@/lib/useAudio'
 import { loadGames, deleteGame, getOrCreateShareToken } from '@/lib/db'
 import type { Game, GameType } from '@/lib/types'
 import styles from './library.module.css'
@@ -24,6 +25,7 @@ export default function LibraryPage() {
   const { user, loading } = useAuth()
   const router = useRouter()
   const { showToast } = useToast()
+  const { playClick } = useAudio()
   const [games, setGames]       = useState<Game[]>([])
   const [fetching, setFetching] = useState(true)
   const [sharing, setSharing]   = useState<string | null>(null)
@@ -41,7 +43,8 @@ export default function LibraryPage() {
     const token = await getOrCreateShareToken(game.id, user.id)
     setSharing(null)
     if (!token) { showToast('⚠️ تعذّر إنشاء رابط المشاركة'); return }
-    const url = `${window.location.origin}/play/${token}`
+    const base = process.env.NEXT_PUBLIC_APP_URL ?? window.location.origin
+    const url = `${base}/play/${token}`
     try {
       await navigator.clipboard.writeText(url)
       showToast('✅ تم نسخ رابط اللعبة!')
@@ -89,7 +92,7 @@ export default function LibraryPage() {
               <div className={styles.cardName}>{game.name}</div>
               <div className={styles.cardMeta}>{meta.label} · {game.entries.length} عناصر</div>
               <div className={styles.cardActions}>
-                <button className={styles.btnPlay}    onClick={() => handlePlay(game)}>▶ تشغيل</button>
+                <button className={styles.btnPlay}    onClick={() => { playClick(); handlePlay(game) }}>▶ تشغيل</button>
                 <button className={styles.btnEdit}    onClick={() => { sessionStorage.setItem('editGame', JSON.stringify(game)); router.push('/create') }}>✏️ تعديل</button>
                 <button className={styles.btnShare}   onClick={() => handleShare(game)} disabled={sharing === game.id}>
                   {sharing === game.id ? '…' : '🔗 مشاركة'}

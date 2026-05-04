@@ -4,6 +4,7 @@ import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/components/AuthProvider'
 import TopBar from '@/components/TopBar'
+import { useAudio } from '@/lib/useAudio'
 import styles from './home.module.css'
 
 const CARDS = [
@@ -15,6 +16,7 @@ const CARDS = [
 export default function HomePage() {
   const { user, username, loading } = useAuth()
   const router = useRouter()
+  const { playClick, playHover } = useAudio()
 
   useEffect(() => {
     if (!loading && !user) router.replace('/auth')
@@ -34,7 +36,9 @@ export default function HomePage() {
 
         <div className={styles.cards}>
           {CARDS.map(c => (
-            <div key={c.href} className={`${styles.card} ${c.cls}`} onClick={() => router.push(c.href)}>
+            <div key={c.href} className={`${styles.card} ${c.cls}`}
+              onMouseEnter={playHover}
+              onClick={() => { playClick(); router.push(c.href) }}>
               <span className={styles.cardIcon}>{c.icon}</span>
               <div className={styles.cardTitle}>{c.title}</div>
               <div className={styles.cardDesc}>{c.desc}</div>

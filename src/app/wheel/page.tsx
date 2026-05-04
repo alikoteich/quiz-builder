@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '@/components/AuthProvider'
 import TopBar from '@/components/TopBar'
 import { useToast } from '@/components/Toast'
+import { useAudio } from '@/lib/useAudio'
 import { loadWheelLists, saveWheelList, deleteWheelList } from '@/lib/db'
 import type { WheelList } from '@/lib/types'
 import styles from './wheel.module.css'
@@ -15,6 +16,7 @@ export default function WheelPage() {
   const { user, loading } = useAuth()
   const router = useRouter()
   const { showToast } = useToast()
+  const { playClick, playWheelStart, playTick, playWheelStop } = useAudio()
 
   const [lists, setLists]         = useState<WheelList[]>([])
   const [textarea, setTextarea]   = useState('')
@@ -71,18 +73,29 @@ export default function WheelPage() {
   function spinWheel() {
     if (spinning || !names.length) return
     setSpinning(true); setPicked('')
+    playWheelStart()
     const extraSpins = (5 + Math.floor(Math.random() * 5)) * 2 * Math.PI
     const finalAngle = Math.random() * 2 * Math.PI
     const total = extraSpins + finalAngle
     const duration = 4000
     const start = performance.now()
     const startAngle = angle
+    const TICK_STEP = Math.PI / 3   // tick every 60 degrees
+    let lastTickCount = 0
 
     function step(now: number) {
       const elapsed = Math.min(now - start, duration)
       const t = elapsed / duration
       const eased = 1 - Math.pow(1 - t, 3)
       const current = startAngle + total * eased
+
+      // Tick pitch follows wheel speed (fast = high, slow = low)
+      const tickCount = Math.floor((current - startAngle) / TICK_STEP)
+      if (tickCount > lastTickCount) {
+        playTick(Math.max(0, 1 - t))
+        lastTickCount = tickCount
+      }
+
       setAngle(current)
       drawWheel(current)
       if (elapsed < duration) { requestAnimationFrame(step) }
@@ -94,6 +107,7 @@ export default function WheelPage() {
         const idx   = Math.floor(ptr / slice) % names.length
         setPicked(names[idx])
         setSpinning(false)
+        playWheelStop()
       }
     }
     requestAnimationFrame(step)
@@ -185,7 +199,7 @@ export default function WheelPage() {
               </div>
             )}
             <div style={{display:'flex',gap:10,justifyContent:'center',flexWrap:'wrap',marginTop:14}}>
-              <button className="btn btn-sun btn-lg" onClick={spinWheel} disabled={spinning || names.length < 2}>
+              <button className="btn btn-sun btn-lg" onClick={() => { playClick(); spinWheel() }} disabled={spinning || names.length < 2}>
                 {spinning ? '🎡 يدور…' : '🎡 أدر الدولاب!'}
               </button>
               <button className="btn btn-ghost" onClick={()=>{setShowWheel(false);setPicked('')}}>← تغيير القائمة</button>

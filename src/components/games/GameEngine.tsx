@@ -52,7 +52,9 @@ function buildQuestions(g: Game): GameEntry[] {
 }
 
 export default function GameEngine({ game, onExit, studentMode, studentName, onComplete }: Props) {
-  const { playSuccess, playError } = useAudio()
+  const { playSuccess, playError, playClick, playGameStart } = useAudio()
+
+  useEffect(() => { playGameStart() }, [])
 
   // useState initializer runs once — prevents re-shuffling on every render
   const [questions] = useState(() => buildQuestions(game))
@@ -121,7 +123,7 @@ export default function GameEngine({ game, onExit, studentMode, studentName, onC
     <div className={styles.page}>
       {/* Header */}
       <div className={styles.header}>
-        <button className={styles.exitBtn} onClick={onExit}>← خروج</button>
+        <button className={styles.exitBtn} onClick={() => { playClick(); onExit() }}>← خروج</button>
         <div className={styles.gameTitle}>{game.name}</div>
         <div style={{display:'flex',alignItems:'center',gap:7}}>
           <div className={styles.progressWrap}><div className={styles.progressFill} style={{width:`${pct}%`}} /></div>
@@ -210,10 +212,11 @@ function McqQ({ question, onAnswer }: { question: GameEntry; onAnswer: AnswerFn 
 function FlashcardQ({ question, onAnswer }: { question: GameEntry; onAnswer: AnswerFn }) {
   const q = question as any
   const [flipped, setFlipped] = useState(false)
+  const { playCardFlip } = useAudio()
   return (
     <div className={styles.qCard} style={{ maxWidth: 420 }}>
       <p className={styles.qText} style={{ marginBottom: 20 }}>اضغط على البطاقة لرؤية الإجابة 👆</p>
-      <div className={styles.flipScene} onClick={() => setFlipped(f => !f)}>
+      <div className={styles.flipScene} onClick={() => { playCardFlip(); setFlipped(f => !f) }}>
         <div className={`${styles.flipCard} ${flipped ? styles.flipped : ''}`}>
           <div className={`${styles.flipFace} ${styles.flipFront}`}>{q.front}<span className={styles.flipHint}>اضغط للقلب</span></div>
           <div className={`${styles.flipFace} ${styles.flipBack}`}>{q.back}</div>
@@ -260,14 +263,17 @@ function SortSentenceQ({ question, onAnswer }: { question: GameEntry; onAnswer: 
   const [bank, setBank]   = useState<string[]>(() => shuffle(words.map((w: string, i: number) => `${w}::${i}`)))
   const [slots, setSlots] = useState<string[]>([])
   const [checked, setChecked] = useState(false)
+  const { playLetterPlace, playLetterRemove } = useAudio()
 
   const pickFromBank = (token: string) => {
     if (checked) return
+    playLetterPlace()
     setSlots(s => [...s, token])
     setBank(b => b.filter(t => t !== token))
   }
   const removeFromSlot = (i: number) => {
     if (checked) return
+    playLetterRemove()
     const token = slots[i]
     setBank(b => [...b, token])
     setSlots(s => s.filter((_, j) => j !== i))
@@ -307,14 +313,17 @@ function WordScrambleQ({ question, onAnswer }: { question: GameEntry; onAnswer: 
   const [bank, setBank]   = useState<string[]>(() => shuffle(letters.map((l: string, i: number) => `${l}::${i}`)))
   const [slots, setSlots] = useState<string[]>([])
   const [checked, setChecked] = useState(false)
+  const { playLetterPlace, playLetterRemove } = useAudio()
 
   const pick = (token: string) => {
     if (checked) return
+    playLetterPlace()
     setSlots(s => [...s, token])
     setBank(b => b.filter(t => t !== token))
   }
   const remove = (i: number) => {
     if (checked) return
+    playLetterRemove()
     const t = slots[i]
     setBank(b => [...b, t])
     setSlots(s => s.filter((_, j) => j !== i))
@@ -361,6 +370,7 @@ function MatchWordsQ({ question, onAnswer }: { question: GameEntry; onAnswer: An
   const [selLeft, setSelLeft]     = useState<string | null>(null)
   const [matched, setMatched]     = useState<Record<string, string>>({})
   const [wrongPair, setWrongPair] = useState<[string, string] | null>(null)
+  const { playMatch } = useAudio()
 
   // SVG connecting lines
   const containerRef = useRef<HTMLDivElement>(null)
@@ -389,6 +399,7 @@ function MatchWordsQ({ question, onAnswer }: { question: GameEntry; onAnswer: An
     if (!selLeft) return
     if (Object.values(matched).includes(r)) return
     if (lr[selLeft] === r) {
+      playMatch()
       const nm = { ...matched, [selLeft]: r }
       setMatched(nm)
       setSelLeft(null)
@@ -457,6 +468,7 @@ function CategorizeQ({ question, onAnswer }: { question: GameEntry; onAnswer: An
   const [placed, setPlaced]     = useState<Record<string, string>>({})
   const [dragOver, setDragOver] = useState<string | null>(null)
   const [checked, setChecked]   = useState(false)
+  const { playDragStart, playDrop } = useAudio()
 
   const placedItems = Object.keys(placed)
   const bankItems   = allItems.filter((a: any) => !placedItems.includes(a.item))
@@ -464,12 +476,13 @@ function CategorizeQ({ question, onAnswer }: { question: GameEntry; onAnswer: An
   const onDragStart = (e: React.DragEvent, item: string) => {
     e.dataTransfer.setData('text/plain', item)
     e.dataTransfer.effectAllowed = 'move'
+    playDragStart()
   }
   const onDrop = (e: React.DragEvent, cat: string) => {
     e.preventDefault()
     if (checked) return
     const item = e.dataTransfer.getData('text/plain')
-    if (item) setPlaced(p => ({ ...p, [item]: cat }))
+    if (item) { playDrop(); setPlaced(p => ({ ...p, [item]: cat })) }
     setDragOver(null)
   }
   const onDragOver = (e: React.DragEvent, cat: string) => {
