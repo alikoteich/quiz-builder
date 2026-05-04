@@ -22,20 +22,21 @@ const rw = () => WMSG[Math.floor(Math.random()*WMSG.length)]
 // ── types ─────────────────────────────────────────────────────────────────────
 interface Props { game: Game; onExit: () => void }
 
+function buildQuestions(g: Game): GameEntry[] {
+  if (g.type === 'match-words')  return [{ pairs: g.entries } as any]
+  if (g.type === 'categorize')   return [{ categories: g.entries } as any]
+  return shuffle(g.entries)
+}
+
 export default function GameEngine({ game, onExit }: Props) {
   const { playSuccess, playError } = useAudio()
 
-  const questions = buildQuestions(game)
+  // useState initializer runs once — prevents re-shuffling on every render
+  const [questions] = useState(() => buildQuestions(game))
   const [idx, setIdx]           = useState(0)
   const [score, setScore]       = useState(0)
   const [feedback, setFeedback] = useState<{ type:'correct'|'wrong'; msg:string } | null>(null)
   const [done, setDone]         = useState(false)
-
-  function buildQuestions(g: Game): GameEntry[] {
-    if (g.type === 'match-words')  return [{ pairs: g.entries } as any]
-    if (g.type === 'categorize')   return [{ categories: g.entries } as any]
-    return shuffle(g.entries)
-  }
 
   const advance = useCallback((correct: boolean, msg?: string) => {
     if (correct) {
@@ -87,19 +88,29 @@ export default function GameEngine({ game, onExit }: Props) {
         </div>
       </div>
 
-      {/* Feedback overlay */}
-      {feedback && (
-        <div className={`${styles.feedbackOverlay} ${feedback.type==='correct' ? styles.feedCorrect : styles.feedWrong}`}>
-          <div className={styles.feedFrame}>
-            <span className={styles.feedIcon}>{feedback.type==='correct' ? '🌟' : '💪'}</span>
-            <div className={styles.feedMsg}>{feedback.msg}</div>
-          </div>
-        </div>
-      )}
-
-      {/* Question */}
+      {/* Question + inline feedback */}
       <div className={styles.content}>
-        <QuestionRenderer game={game} question={q} onAnswer={advance} key={idx} />
+        {feedback && (
+          <div className={`${styles.feedBanner} ${feedback.type === 'correct' ? styles.feedOk : styles.feedErr}`}>
+            <span className={styles.feedEmoji}>{feedback.type === 'correct' ? '⭐' : '💪'}</span>
+            <span className={styles.feedText}>{feedback.msg}</span>
+            {feedback.type === 'correct' && (
+              <div className={styles.particles}>
+                <span className={`${styles.particle} ${styles.p1}`}>✨</span>
+                <span className={`${styles.particle} ${styles.p2}`}>🌟</span>
+                <span className={`${styles.particle} ${styles.p3}`}>⭐</span>
+                <span className={`${styles.particle} ${styles.p4}`}>💫</span>
+                <span className={`${styles.particle} ${styles.p5}`}>✨</span>
+                <span className={`${styles.particle} ${styles.p6}`}>🌟</span>
+                <span className={`${styles.particle} ${styles.p7}`}>⭐</span>
+                <span className={`${styles.particle} ${styles.p8}`}>💫</span>
+              </div>
+            )}
+          </div>
+        )}
+        <div className={`${styles.qWrap} ${feedback?.type === 'correct' ? styles.qWrapOk : feedback?.type === 'wrong' ? styles.qWrapErr : ''}`}>
+          <QuestionRenderer game={game} question={q} onAnswer={advance} key={idx} />
+        </div>
       </div>
     </div>
   )

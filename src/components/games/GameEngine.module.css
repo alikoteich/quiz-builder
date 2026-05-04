@@ -148,23 +148,60 @@
 .catCorrect { background:#DFFAE7 !important; color:#2D7A44 !important; border-color:var(--grass) !important; font-weight:800; cursor:default; }
 .catWrong   { background:#FFE8E8 !important; color:#B83232 !important; border-color:var(--coral) !important; font-weight:800; cursor:default; }
 
-/* ── Feedback overlay ────────────────────────────────────────── */
-.feedbackOverlay {
-  position:fixed; inset:0; display:flex; flex-direction:column;
-  align-items:center; justify-content:center; z-index:100;
-  background:rgba(0,0,0,.35); backdrop-filter:blur(3px);
+/* ── Inline feedback banner ──────────────────────────────────── */
+.feedBanner {
+  width:100%; max-width:720px;
+  border-radius:22px; padding:14px 24px;
+  display:flex; align-items:center; justify-content:center; gap:12px;
+  font-weight:900; margin-bottom:14px;
+  position:relative; overflow:visible;
+  animation:bannerIn .4s cubic-bezier(.34,1.56,.64,1);
 }
-.feedFrame {
-  background:var(--card); border-radius:32px; padding:36px 52px;
-  text-align:center; box-shadow:0 24px 70px rgba(0,0,0,.3);
-  animation:cardIn .45s cubic-bezier(.34,1.56,.64,1); max-width:88vw;
+@keyframes bannerIn {
+  from { opacity:0; transform:translateY(-18px) scale(.92); }
+  to   { opacity:1; transform:translateY(0) scale(1); }
 }
-.feedCorrect .feedFrame { border:4px solid var(--grass); }
-.feedWrong   .feedFrame { border:4px solid var(--coral); }
-.feedIcon { font-size:3rem; display:block; margin-bottom:8px; }
-.feedMsg  { font-size:clamp(1.6rem,5vw,2.8rem); font-weight:900; }
-.feedCorrect .feedMsg { color:var(--grass); }
-.feedWrong   .feedMsg { color:var(--coral); }
+.feedOk {
+  background:linear-gradient(135deg,#DFFAE7,#B8F5CB);
+  border:3px solid var(--grass); color:#1A6B35;
+  box-shadow:0 8px 28px rgba(107,203,119,.35);
+}
+.feedErr {
+  background:linear-gradient(135deg,#FFE8E8,#FFD0D0);
+  border:3px solid var(--coral); color:#B83232;
+  animation:bannerIn .3s ease, shake .45s ease .1s;
+}
+.feedEmoji { font-size:2rem; animation:pop .5s cubic-bezier(.34,1.56,.64,1); display:block; }
+.feedText  { font-size:clamp(1.1rem,3vw,1.5rem); }
+@keyframes pop { from{transform:scale(0) rotate(-15deg)} 70%{transform:scale(1.15) rotate(5deg)} to{transform:scale(1) rotate(0)} }
+
+/* Card glow on feedback */
+.qWrap    { border-radius:30px; }
+.qWrapOk  { border-radius:30px; box-shadow:0 0 0 5px var(--grass),0 16px 48px rgba(107,203,119,.35); animation:glowPulse .5s ease; }
+.qWrapErr { border-radius:30px; animation:shake .45s ease; }
+@keyframes glowPulse {
+  0%  { box-shadow:0 0 0 0   rgba(107,203,119,.9); }
+  60% { box-shadow:0 0 0 18px rgba(107,203,119,0); }
+  100%{ box-shadow:0 0 0 5px var(--grass),0 16px 48px rgba(107,203,119,.35); }
+}
+
+/* Confetti particles */
+.particles { position:absolute; inset:0; pointer-events:none; }
+.particle  { position:absolute; font-size:1.5rem; top:50%; left:50%;
+             animation-duration:1s; animation-fill-mode:forwards;
+             animation-timing-function:cubic-bezier(.2,.8,.4,1); }
+.p1{animation-name:fly1} .p2{animation-name:fly2;animation-delay:.06s}
+.p3{animation-name:fly3;animation-delay:.1s}  .p4{animation-name:fly4;animation-delay:.04s}
+.p5{animation-name:fly5;animation-delay:.14s} .p6{animation-name:fly6;animation-delay:.08s}
+.p7{animation-name:fly7;animation-delay:.12s} .p8{animation-name:fly8;animation-delay:.02s}
+@keyframes fly1{to{transform:translate(-90px,-90px) scale(0) rotate(200deg);opacity:0}}
+@keyframes fly2{to{transform:translate(90px,-80px)  scale(0) rotate(-180deg);opacity:0}}
+@keyframes fly3{to{transform:translate(-140px,0px)  scale(0) rotate(120deg);opacity:0}}
+@keyframes fly4{to{transform:translate(140px,0px)   scale(0) rotate(-120deg);opacity:0}}
+@keyframes fly5{to{transform:translate(-60px,-120px)scale(0) rotate(240deg);opacity:0}}
+@keyframes fly6{to{transform:translate(60px,-110px) scale(0) rotate(-240deg);opacity:0}}
+@keyframes fly7{to{transform:translate(-110px,60px) scale(0) rotate(90deg);opacity:0}}
+@keyframes fly8{to{transform:translate(110px,60px)  scale(0) rotate(-90deg);opacity:0}}
 
 /* ── Results ─────────────────────────────────────────────────── */
 .resultPage { min-height:100vh; display:flex; align-items:center; justify-content:center;
