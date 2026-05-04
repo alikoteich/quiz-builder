@@ -1,3 +1,35 @@
+/* ── Fill-blank insert button + preview ───────────────────── */
+.inputWithBtn { display: flex; gap: 8px; align-items: stretch; }
+.inputWithBtn .form-input { flex: 1; }
+.insertBtn {
+  flex-shrink: 0;
+  padding: 10px 16px;
+  background: linear-gradient(135deg, var(--sun), var(--orange));
+  color: #fff; border: none; border-radius: 13px;
+  font-family: 'Tajawal', sans-serif; font-size: .9rem; font-weight: 800;
+  cursor: pointer; white-space: nowrap;
+  transition: transform .2s, box-shadow .2s;
+  box-shadow: 0 4px 12px rgba(255,159,67,.35);
+}
+.insertBtn:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(255,159,67,.45); }
+
+.preview {
+  margin-top: 10px;
+  padding: 10px 14px;
+  background: #F4F6FF;
+  border-radius: 10px;
+  border: 2px solid #E0E6FF;
+  font-size: .95rem; font-weight: 600; color: var(--dark);
+  line-height: 1.7;
+}
+.previewLabel { color: var(--mid); font-size: .82rem; font-weight: 700; margin-left: 6px; }
+.blankGap {
+  display: inline-block;
+  border-bottom: 3px solid var(--violet);
+  min-width: 60px; margin: 0 4px;
+  color: transparent; vertical-align: bottom;
+}
+
 .area {
   background: var(--card);
   border-radius: var(--radius);

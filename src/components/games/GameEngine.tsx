@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef, useLayoutEffect } from 'react'
 import type { Game, GameEntry } from '@/lib/types'
 import { useAudio } from '@/lib/useAudio'
 import styles from './GameEngine.module.css'
@@ -99,7 +99,7 @@ export default function GameEngine({ game, onExit }: Props) {
 
       {/* Question */}
       <div className={styles.content}>
-        <QuestionRenderer game={game} question={q} onAnswer={advance} />
+        <QuestionRenderer game={game} question={q} onAnswer={advance} key={idx} />
       </div>
     </div>
   )
@@ -308,10 +308,29 @@ function MatchWordsQ({ question, onAnswer }: { question: GameEntry; onAnswer: An
   const [matched, setMatched]     = useState<Record<string, string>>({})
   const [wrongPair, setWrongPair] = useState<[string, string] | null>(null)
 
-  const pickLeft = (l: string) => {
-    if (matched[l]) return
-    setSelLeft(l)
-  }
+  // SVG connecting lines
+  const containerRef = useRef<HTMLDivElement>(null)
+  const leftRefs     = useRef<Record<string, HTMLDivElement | null>>({})
+  const rightRefs    = useRef<Record<string, HTMLDivElement | null>>({})
+  const [lines, setLines] = useState<{ x1:number; y1:number; x2:number; y2:number; key:string }[]>([])
+
+  useLayoutEffect(() => {
+    if (!containerRef.current || Object.keys(matched).length === 0) { setLines([]); return }
+    const cr = containerRef.current.getBoundingClientRect()
+    const nl = Object.entries(matched).flatMap(([left, right]) => {
+      const lEl = leftRefs.current[left]
+      const rEl = rightRefs.current[right]
+      if (!lEl || !rEl) return []
+      const lR = lEl.getBoundingClientRect()
+      const rR = rEl.getBoundingClientRect()
+      // RTL: lefts column is on the right visually — connect its left edge to rights' right edge
+      return [{ x1: lR.left - cr.left, y1: lR.top - cr.top + lR.height / 2,
+                x2: rR.right - cr.left, y2: rR.top - cr.top + rR.height / 2, key: left }]
+    })
+    setLines(nl)
+  }, [matched])
+
+  const pickLeft = (l: string) => { if (matched[l]) return; setSelLeft(l) }
   const pickRight = (r: string) => {
     if (!selLeft) return
     if (Object.values(matched).includes(r)) return
@@ -319,24 +338,37 @@ function MatchWordsQ({ question, onAnswer }: { question: GameEntry; onAnswer: An
       const nm = { ...matched, [selLeft]: r }
       setMatched(nm)
       setSelLeft(null)
-      if (Object.keys(nm).length === pairs.length) setTimeout(() => onAnswer(true), 500)
+      if (Object.keys(nm).length === pairs.length) setTimeout(() => onAnswer(true), 700)
     } else {
       setWrongPair([selLeft, r])
       setTimeout(() => { setWrongPair(null); setSelLeft(null) }, 600)
     }
   }
+
   return (
-    <div className={styles.qCard} style={{ maxWidth: 700 }}>
+    <div className={styles.qCard} style={{ maxWidth: 740 }}>
       <p className={styles.qText} style={{ marginBottom: 20 }}>وصّل كل كلمة بما يناسبها 🔗</p>
-      <div className={styles.matchGrid}>
+      <div ref={containerRef} className={styles.matchGrid} style={{ position: 'relative' }}>
+        {/* SVG lines between matched pairs */}
+        <svg style={{ position:'absolute', inset:0, width:'100%', height:'100%', pointerEvents:'none', overflow:'visible', zIndex:1 }}>
+          {lines.map(l => {
+            const mid = (l.x1 + l.x2) / 2
+            return (
+              <path key={l.key}
+                d={`M ${l.x1} ${l.y1} C ${mid} ${l.y1}, ${mid} ${l.y2}, ${l.x2} ${l.y2}`}
+                stroke="var(--grass)" strokeWidth="3.5" fill="none" strokeLinecap="round" />
+            )
+          })}
+        </svg>
         <div className={styles.matchCol}>
           {lefts.map(l => {
             const isMatched = !!matched[l]
             const isWrong   = wrongPair?.[0] === l
             const isSel     = selLeft === l
             return (
-              <div key={l}
+              <div key={l} ref={el => { leftRefs.current[l] = el }}
                 className={`${styles.matchItem} ${isSel ? styles.matchSel : ''} ${isMatched ? styles.matchMatched : ''} ${isWrong ? styles.matchWrong : ''}`}
+                style={{ position:'relative', zIndex:2 }}
                 onClick={() => pickLeft(l)}>
                 {l}
               </div>
@@ -348,8 +380,9 @@ function MatchWordsQ({ question, onAnswer }: { question: GameEntry; onAnswer: An
             const isMatched = Object.values(matched).includes(r)
             const isWrong   = wrongPair?.[1] === r
             return (
-              <div key={r}
+              <div key={r} ref={el => { rightRefs.current[r] = el }}
                 className={`${styles.matchItem} ${isMatched ? styles.matchMatched : ''} ${isWrong ? styles.matchWrong : ''}`}
+                style={{ position:'relative', zIndex:2 }}
                 onClick={() => pickRight(r)}>
                 {r}
               </div>
@@ -397,7 +430,8 @@ function CategorizeQ({ question, onAnswer }: { question: GameEntry; onAnswer: An
     if (checked || Object.keys(placed).length < allItems.length) return
     setChecked(true)
     const correct = allItems.every((a: any) => placed[a.item] === a.cat)
-    setTimeout(() => onAnswer(correct), 700)
+    // Delay lets kids read the per-word green/red feedback before the overlay
+    setTimeout(() => onAnswer(correct), 2000)
   }
 
   return (
@@ -409,12 +443,7 @@ function CategorizeQ({ question, onAnswer }: { question: GameEntry; onAnswer: An
         {bankItems.length === 0
           ? <span className={styles.catBankEmpty}>✅ تم وضع جميع الكلمات</span>
           : bankItems.map((a: any) => (
-              <div
-                key={a.item}
-                className={styles.catDragChip}
-                draggable
-                onDragStart={e => onDragStart(e, a.item)}
-              >
+              <div key={a.item} className={styles.catDragChip} draggable onDragStart={e => onDragStart(e, a.item)}>
                 {a.item}
               </div>
             ))
@@ -433,11 +462,16 @@ function CategorizeQ({ question, onAnswer }: { question: GameEntry; onAnswer: An
           >
             <div className={styles.catZoneTitle}>{cat.category}</div>
             <div className={styles.catItems}>
-              {allItems.filter((a: any) => placed[a.item] === cat.category).map((a: any) => (
-                <button key={a.item} className={`${styles.catItem} ${styles.catPlaced}`} onClick={() => removeItem(a.item)} title="اضغط للإزالة">
-                  {a.item} ✕
-                </button>
-              ))}
+              {allItems.filter((a: any) => placed[a.item] === cat.category).map((a: any) => {
+                const isCorrect = a.cat === cat.category
+                return (
+                  <button key={a.item}
+                    className={`${styles.catItem} ${checked ? (isCorrect ? styles.catCorrect : styles.catWrong) : styles.catPlaced}`}
+                    onClick={() => removeItem(a.item)} title={checked ? '' : 'اضغط للإزالة'}>
+                    {a.item} {checked ? (isCorrect ? '✓' : '✗') : '✕'}
+                  </button>
+                )
+              })}
             </div>
           </div>
         ))}

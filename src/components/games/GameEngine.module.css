@@ -92,7 +92,7 @@
 .bankRow  { display:flex; gap:7px; justify-content:center; flex-wrap:wrap; margin-bottom:18px; }
 .bankBtn  { min-width:50px; padding:9px 14px; background:linear-gradient(135deg,var(--sun),var(--orange)); border:none; border-radius:11px; font-family:'Tajawal',sans-serif; font-size:1rem; font-weight:800; color:#fff; cursor:pointer; transition:all .22s cubic-bezier(.34,1.56,.64,1); box-shadow:0 4px 10px rgba(255,159,67,.35); }
 .bankBtn:hover { transform:translateY(-5px) scale(1.1); }
-.slotFilled { background:linear-gradient(135deg,var(--violet),var(--sky)) !important; }
+.slotFilled { background:linear-gradient(135deg,var(--violet),var(--sky)) !important; color:#fff !important; }
 .slotEmpty  { width:54px; height:44px; background:linear-gradient(135deg,#EEF4FF,#F5EEFF); border:3px dashed var(--violet); border-radius:13px; }
 
 .letterSlot { width:54px; height:54px; display:flex; align-items:center; justify-content:center; background:linear-gradient(135deg,#EEF4FF,#F5EEFF); border:3px dashed var(--violet); border-radius:13px; font-size:1.55rem; font-weight:900; color:var(--violet); cursor:pointer; transition:all .18s; }
@@ -100,7 +100,7 @@
 .letterBtn:hover { transform:translateY(-5px) scale(1.1); }
 
 /* ── Match words ─────────────────────────────────────────────  */
-.matchGrid { display:grid; grid-template-columns:1fr 1fr; gap:40px; width:100%; max-width:600px; margin:0 auto; }
+.matchGrid { display:grid; grid-template-columns:1fr 1fr; gap:80px; width:100%; max-width:660px; margin:0 auto; }
 .matchCol  { display:flex; flex-direction:column; gap:12px; }
 .matchItem { padding:14px 18px; border-radius:14px; font-size:1.05rem; font-weight:800; text-align:center; cursor:pointer; border:3px solid #E0E8FF; background:#F8F9FF; transition:all .18s; }
 .matchItem:hover:not(.matchMatched) { border-color:var(--violet); background:#F0EAFF; }
@@ -143,8 +143,10 @@
 .catZoneTitle { font-size: .95rem; font-weight: 800; margin-bottom: 10px; color: var(--dark); }
 .catItems  { display: flex; flex-wrap: wrap; gap: 7px; justify-content: center; }
 .catItem   { padding: 7px 12px; border-radius: 50px; font-size: .9rem; font-weight: 700; cursor: pointer; border: 2px solid transparent; }
-.catPlaced { background: #EEF4FF; color: var(--violet); border-color: #C8D0FF; transition: background .15s; }
-.catPlaced:hover { background: #FFE8E8; color: var(--coral); border-color: #FFC8C8; }
+.catPlaced  { background:#EEF4FF; color:var(--violet); border-color:#C8D0FF; transition:background .15s; }
+.catPlaced:hover { background:#FFE8E8; color:var(--coral); border-color:#FFC8C8; }
+.catCorrect { background:#DFFAE7 !important; color:#2D7A44 !important; border-color:var(--grass) !important; font-weight:800; cursor:default; }
+.catWrong   { background:#FFE8E8 !important; color:#B83232 !important; border-color:var(--coral) !important; font-weight:800; cursor:default; }
 
 /* ── Feedback overlay ────────────────────────────────────────── */
 .feedbackOverlay {
